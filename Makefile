@@ -1,11 +1,12 @@
-.PHONY: up down restart web schema
+.PHONY: up down restart web schema mock
 
 up:
-	$(MAKE) -j2 web schema
+	$(MAKE) -j3 web schema mock
 
 down:
 	pkill -f "next dev" || true
 	pkill -f "redocly preview" || true
+	pkill -f "redocly mock" || true
 
 restart: down up
 
@@ -14,3 +15,6 @@ web:
 
 schema:
 	cd schema && bun run preview
+
+mock:
+	cd schema && bun run mock
