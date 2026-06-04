@@ -1,0 +1,316 @@
+openapi: 3.1.0
+info:
+  title: Spark API
+  version: 0.1.0
+  description: Spark API
+
+servers:
+  - url: http://localhost:8080
+    description: Local
+
+tags:
+  - name: auth
+    description: 認証
+
+paths:
+  /auth/register:
+    post:
+      tags: [auth]
+      summary: メールアドレスで新規登録
+      description: |
+        メールアドレスとパスワードで新規登録する。
+        登録後、確認用OTPをメールに送信する。
+      operationId: registerWithEmail
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '200':
+          description: 登録成功。OTPをメールに送信した。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OtpSentResponse'
+        '409':
+          description: メールアドレスが既に登録済み
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /auth/login:
+    post:
+      tags: [auth]
+      summary: メールアドレスとパスワードでログイン
+      description: |
+        認証成功後、OTPを登録済みメールアドレスに送信する。
+        OTPの検証は `/auth/otp/verify` で行う。
+      operationId: loginWithEmail
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: 認証成功。OTPをメールに送信した。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OtpSentResponse'
+        '401':
+          description: メールアドレスまたはパスワードが不正
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /auth/otp/verify:
+    post:
+      tags: [auth]
+      summary: OTPを検証してトークンを発行
+      description: |
+        メールで送信された6桁のOTPを検証する。
+        成功するとアクセストークンとリフレッシュトークンを返す。
+      operationId: verifyOtp
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OtpVerifyRequest'
+      responses:
+        '200':
+          description: OTP検証成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokensResponse'
+        '400':
+          description: OTPが不正または期限切れ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /auth/google:
+    post:
+      tags: [auth]
+      summary: GoogleでログインまたはID連携
+      description: |
+        フロントエンドで取得したGoogleのIDトークンを送信する。
+        未登録の場合は自動的に新規登録する。
+      operationId: loginWithGoogle
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GoogleLoginRequest'
+      responses:
+        '200':
+          description: 認証成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokensResponse'
+        '401':
+          description: IDトークンが不正
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /auth/refresh:
+    post:
+      tags: [auth]
+      summary: アクセストークンを更新
+      operationId: refreshToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '200':
+          description: トークン更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthTokensResponse'
+        '401':
+          description: リフレッシュトークンが不正または期限切れ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/logout:
+    post:
+      tags: [auth]
+      summary: ログアウト
+      description: リフレッシュトークンを無効化する。
+      operationId: logout
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '204':
+          description: ログアウト成功
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  responses:
+    Unauthorized:
+      description: 認証エラー
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ValidationError:
+      description: バリデーションエラー
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationErrorResponse'
+
+  schemas:
+    RegisterRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        password:
+          type: string
+          minLength: 8
+          example: password123
+
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        password:
+          type: string
+          example: password123
+
+    OtpVerifyRequest:
+      type: object
+      required: [email, code]
+      properties:
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        code:
+          type: string
+          pattern: '^\d{6}$'
+          description: メールで送信された6桁の数字
+          example: '123456'
+
+    GoogleLoginRequest:
+      type: object
+      required: [id_token]
+      properties:
+        id_token:
+          type: string
+          description: Googleから取得したIDトークン
+
+    RefreshTokenRequest:
+      type: object
+      required: [refresh_token]
+      properties:
+        refresh_token:
+          type: string
+
+    OtpSentResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: OTPをメールに送信しました
+        expires_in:
+          type: integer
+          description: OTPの有効期限（秒）
+          example: 300
+
+    AuthTokensResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+        refresh_token:
+          type: string
+        token_type:
+          type: string
+          enum: [Bearer]
+          example: Bearer
+        expires_in:
+          type: integer
+          description: アクセストークンの有効期限（秒）
+          example: 3600
+
+    ErrorResponse:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+          example: INVALID_CREDENTIALS
+        message:
+          type: string
+          example: メールアドレスまたはパスワードが正しくありません
+
+    ValidationErrorResponse:
+      type: object
+      required: [code, message, errors]
+      properties:
+        code:
+          type: string
+          example: VALIDATION_ERROR
+        message:
+          type: string
+          example: 入力値が不正です
+        errors:
+          type: array
+          items:
+            type: object
+            required: [field, message]
+            properties:
+              field:
+                type: string
+                example: email
+              message:
+                type: string
+                example: 有効なメールアドレスを入力してください
