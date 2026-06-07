@@ -43,3 +43,5 @@ description: 各サービスの技術スタックと環境情報。常時適用
 | `DB_NAME` | MySQL データベース名 |
 | `JWT_SECRET` | JWT 署名シークレット |
 | `GOOGLE_CLIENT_ID` | Google OAuth クライアント ID |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth クライアント シークレット（サーバーサイドのみ） |
+| `RESEND_API_KEY` | Resend メール送信 API キー |
