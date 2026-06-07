@@ -8,8 +8,8 @@ up: down
 down:
 	lsof -ti:3000 | xargs kill -9 2>/dev/null || true
 	lsof -ti:3001 | xargs kill -9 2>/dev/null || true
-	lsof -ti:8080 | xargs kill -9 2>/dev/null || true
 	lsof -ti:8081 | xargs kill -9 2>/dev/null || true
+	cd api && docker compose down 2>/dev/null || true
 
 restart: down up
 
@@ -17,7 +17,7 @@ web:
 	cd web && bun run dev
 
 api:
-	cd api && go run .
+	cd api && docker compose up --build app
 
 schema:
 	cd schema && PATH="$(NVM_NODE):$$PATH" bun run preview

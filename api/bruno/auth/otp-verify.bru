@@ -1,0 +1,18 @@
+meta {
+  name: OTP検証・トークン発行
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{base_url}}/auth/otp/verify
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "email": "user@example.com",
+    "code": "123456"
+  }
+}

@@ -12,6 +12,17 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+type mockEmailService struct {
+	sendOTP func(ctx context.Context, to, code string) error
+}
+
+func (m *mockEmailService) SendOTP(ctx context.Context, to, code string) error {
+	if m.sendOTP != nil {
+		return m.sendOTP(ctx, to, code)
+	}
+	return nil
+}
+
 // mockAuthRepository implements repository.AuthRepository for testing.
 type mockAuthRepository struct {
 	findUserByEmail         func(ctx context.Context, email string) (*repository.AuthUser, error)
@@ -51,7 +62,8 @@ func (m *mockAuthRepository) DeleteRefreshToken(ctx context.Context, token strin
 
 func newTestUsecase(repo *mockAuthRepository) *authUsecase {
 	return &authUsecase{
-		authRepo: repo,
+		authRepo:  repo,
+		emailSvc:  &mockEmailService{},
 		validateGoogleToken: func(ctx context.Context, idToken, audience string) (string, error) {
 			return "", errors.New("default mock: not configured")
 		},

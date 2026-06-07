@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/katedegree/spark/api/internal/domain/email"
 	"github.com/katedegree/spark/api/internal/domain/repository"
 	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/api/idtoken"
@@ -44,12 +45,14 @@ type googleTokenValidator func(ctx context.Context, idToken, audience string) (e
 
 type authUsecase struct {
 	authRepo            repository.AuthRepository
+	emailSvc            email.EmailService
 	validateGoogleToken googleTokenValidator
 }
 
-func NewAuthUsecase(authRepo repository.AuthRepository) AuthUsecase {
+func NewAuthUsecase(authRepo repository.AuthRepository, emailSvc email.EmailService) AuthUsecase {
 	return &authUsecase{
 		authRepo: authRepo,
+		emailSvc: emailSvc,
 		validateGoogleToken: func(ctx context.Context, idToken, audience string) (string, error) {
 			payload, err := idtoken.Validate(ctx, idToken, audience)
 			if err != nil {
@@ -83,7 +86,10 @@ func (u *authUsecase) Register(ctx context.Context, email, password string) erro
 	}
 
 	code := fmt.Sprintf("%06d", mathrand.IntN(1000000))
-	return u.authRepo.SaveOTP(ctx, email, code)
+	if err := u.authRepo.SaveOTP(ctx, email, code); err != nil {
+		return err
+	}
+	return u.emailSvc.SendOTP(ctx, email, code)
 }
 
 func (u *authUsecase) Login(ctx context.Context, email, password string) error {
@@ -100,7 +106,10 @@ func (u *authUsecase) Login(ctx context.Context, email, password string) error {
 	}
 
 	code := fmt.Sprintf("%06d", mathrand.IntN(1000000))
-	return u.authRepo.SaveOTP(ctx, email, code)
+	if err := u.authRepo.SaveOTP(ctx, email, code); err != nil {
+		return err
+	}
+	return u.emailSvc.SendOTP(ctx, email, code)
 }
 
 func (u *authUsecase) VerifyOTP(ctx context.Context, email, code string) (*TokenPair, error) {

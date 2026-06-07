@@ -1,0 +1,22 @@
+meta {
+  name: メールアドレスで新規登録
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{base_url}}/auth/register
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "email": "nakao.keito0418@gmail.com",
+    "password": "password123"
+  }
+}
+
+vars:pre-request {
+  base_url: http://localhost:8080
+}

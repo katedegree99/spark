@@ -1,0 +1,21 @@
+meta {
+  name: ログアウト
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{base_url}}/auth/logout
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{access_token}}
+}
+
+body:json {
+  {
+    "refresh_token": "{{refresh_token}}"
+  }
+}
