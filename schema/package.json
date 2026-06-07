@@ -3,8 +3,8 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "preview": "redocly preview-docs openapi/openapi.yaml --port 8081",
-    "mock": "redocly mock openapi/openapi.yaml --port 3001",
+    "preview": "bunx @redocly/cli@1 preview-docs openapi/openapi.yaml --port 8081",
+    "mock": "bunx @stoplight/prism-cli mock openapi/openapi.yaml --port 3001",
     "lint": "redocly lint",
     "build": "redocly build-docs openapi/openapi.yaml --output dist/index.html",
     "bundle": "redocly bundle openapi/openapi.yaml --output dist/openapi.yaml"
