@@ -1,0 +1,287 @@
+package usecase
+
+import (
+	"context"
+	"errors"
+	"testing"
+	"time"
+
+	"github.com/katedegree/spark/api/internal/domain/repository"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"golang.org/x/crypto/bcrypt"
+)
+
+// mockAuthRepository implements repository.AuthRepository for testing.
+type mockAuthRepository struct {
+	findUserByEmail         func(ctx context.Context, email string) (*repository.AuthUser, error)
+	createUser              func(ctx context.Context, email, hashedPassword string) (*repository.AuthUser, error)
+	findOrCreateUserByEmail func(ctx context.Context, email string) (*repository.AuthUser, error)
+	saveOTP                 func(ctx context.Context, email, code string) error
+	verifyOTP               func(ctx context.Context, email, code string) (bool, error)
+	saveRefreshToken        func(ctx context.Context, userID uint, token string, expiresAt time.Time) error
+	findRefreshToken        func(ctx context.Context, token string) (*repository.RefreshTokenRecord, error)
+	deleteRefreshToken      func(ctx context.Context, token string) error
+}
+
+func (m *mockAuthRepository) FindUserByEmail(ctx context.Context, email string) (*repository.AuthUser, error) {
+	return m.findUserByEmail(ctx, email)
+}
+func (m *mockAuthRepository) CreateUser(ctx context.Context, email, hashedPassword string) (*repository.AuthUser, error) {
+	return m.createUser(ctx, email, hashedPassword)
+}
+func (m *mockAuthRepository) FindOrCreateUserByEmail(ctx context.Context, email string) (*repository.AuthUser, error) {
+	return m.findOrCreateUserByEmail(ctx, email)
+}
+func (m *mockAuthRepository) SaveOTP(ctx context.Context, email, code string) error {
+	return m.saveOTP(ctx, email, code)
+}
+func (m *mockAuthRepository) VerifyOTP(ctx context.Context, email, code string) (bool, error) {
+	return m.verifyOTP(ctx, email, code)
+}
+func (m *mockAuthRepository) SaveRefreshToken(ctx context.Context, userID uint, token string, expiresAt time.Time) error {
+	return m.saveRefreshToken(ctx, userID, token, expiresAt)
+}
+func (m *mockAuthRepository) FindRefreshToken(ctx context.Context, token string) (*repository.RefreshTokenRecord, error) {
+	return m.findRefreshToken(ctx, token)
+}
+func (m *mockAuthRepository) DeleteRefreshToken(ctx context.Context, token string) error {
+	return m.deleteRefreshToken(ctx, token)
+}
+
+func newTestUsecase(repo *mockAuthRepository) *authUsecase {
+	return &authUsecase{
+		authRepo: repo,
+		validateGoogleToken: func(ctx context.Context, idToken, audience string) (string, error) {
+			return "", errors.New("default mock: not configured")
+		},
+	}
+}
+
+// --- Register ---
+
+func TestRegister_Success(t *testing.T) {
+	repo := &mockAuthRepository{
+		findUserByEmail: func(_ context.Context, _ string) (*repository.AuthUser, error) { return nil, nil },
+		createUser: func(_ context.Context, email, _ string) (*repository.AuthUser, error) {
+			return &repository.AuthUser{ID: 1, Email: email}, nil
+		},
+		saveOTP: func(_ context.Context, _, _ string) error { return nil },
+	}
+	uc := newTestUsecase(repo)
+
+	err := uc.Register(context.Background(), "test@example.com", "password123")
+	require.NoError(t, err)
+}
+
+func TestRegister_EmailAlreadyExists(t *testing.T) {
+	repo := &mockAuthRepository{
+		findUserByEmail: func(_ context.Context, email string) (*repository.AuthUser, error) {
+			return &repository.AuthUser{ID: 1, Email: email}, nil
+		},
+	}
+	uc := newTestUsecase(repo)
+
+	err := uc.Register(context.Background(), "existing@example.com", "password123")
+	assert.ErrorIs(t, err, ErrEmailAlreadyExists)
+}
+
+func TestRegister_RepositoryError(t *testing.T) {
+	dbErr := errors.New("db error")
+	repo := &mockAuthRepository{
+		findUserByEmail: func(_ context.Context, _ string) (*repository.AuthUser, error) {
+			return nil, dbErr
+		},
+	}
+	uc := newTestUsecase(repo)
+
+	err := uc.Register(context.Background(), "test@example.com", "password123")
+	assert.ErrorIs(t, err, dbErr)
+}
+
+// --- Login ---
+
+func TestLogin_Success(t *testing.T) {
+	hashed, _ := bcrypt.GenerateFromPassword([]byte("password123"), bcrypt.MinCost)
+	repo := &mockAuthRepository{
+		findUserByEmail: func(_ context.Context, email string) (*repository.AuthUser, error) {
+			return &repository.AuthUser{ID: 1, Email: email, HashedPassword: string(hashed)}, nil
+		},
+		saveOTP: func(_ context.Context, _, _ string) error { return nil },
+	}
+	uc := newTestUsecase(repo)
+
+	err := uc.Login(context.Background(), "test@example.com", "password123")
+	require.NoError(t, err)
+}
+
+func TestLogin_UserNotFound(t *testing.T) {
+	repo := &mockAuthRepository{
+		findUserByEmail: func(_ context.Context, _ string) (*repository.AuthUser, error) { return nil, nil },
+	}
+	uc := newTestUsecase(repo)
+
+	err := uc.Login(context.Background(), "nobody@example.com", "password123")
+	assert.ErrorIs(t, err, ErrInvalidCredentials)
+}
+
+func TestLogin_WrongPassword(t *testing.T) {
+	hashed, _ := bcrypt.GenerateFromPassword([]byte("correct"), bcrypt.MinCost)
+	repo := &mockAuthRepository{
+		findUserByEmail: func(_ context.Context, email string) (*repository.AuthUser, error) {
+			return &repository.AuthUser{ID: 1, Email: email, HashedPassword: string(hashed)}, nil
+		},
+	}
+	uc := newTestUsecase(repo)
+
+	err := uc.Login(context.Background(), "test@example.com", "wrong")
+	assert.ErrorIs(t, err, ErrInvalidCredentials)
+}
+
+// --- VerifyOTP ---
+
+func TestVerifyOTP_Success(t *testing.T) {
+	t.Setenv("JWT_SECRET", "test-secret")
+
+	repo := &mockAuthRepository{
+		verifyOTP: func(_ context.Context, _, _ string) (bool, error) { return true, nil },
+		findUserByEmail: func(_ context.Context, email string) (*repository.AuthUser, error) {
+			return &repository.AuthUser{ID: 1, Email: email}, nil
+		},
+		saveRefreshToken: func(_ context.Context, _ uint, _ string, _ time.Time) error { return nil },
+	}
+	uc := newTestUsecase(repo)
+
+	pair, err := uc.VerifyOTP(context.Background(), "test@example.com", "123456")
+	require.NoError(t, err)
+	assert.NotEmpty(t, pair.AccessToken)
+	assert.NotEmpty(t, pair.RefreshToken)
+}
+
+func TestVerifyOTP_InvalidCode(t *testing.T) {
+	repo := &mockAuthRepository{
+		verifyOTP: func(_ context.Context, _, _ string) (bool, error) { return false, nil },
+	}
+	uc := newTestUsecase(repo)
+
+	_, err := uc.VerifyOTP(context.Background(), "test@example.com", "000000")
+	assert.ErrorIs(t, err, ErrInvalidOTP)
+}
+
+func TestVerifyOTP_UserNotFound(t *testing.T) {
+	repo := &mockAuthRepository{
+		verifyOTP:       func(_ context.Context, _, _ string) (bool, error) { return true, nil },
+		findUserByEmail: func(_ context.Context, _ string) (*repository.AuthUser, error) { return nil, nil },
+	}
+	uc := newTestUsecase(repo)
+
+	_, err := uc.VerifyOTP(context.Background(), "gone@example.com", "123456")
+	assert.ErrorIs(t, err, ErrInvalidOTP)
+}
+
+// --- LoginWithGoogle ---
+
+func TestLoginWithGoogle_Success(t *testing.T) {
+	t.Setenv("JWT_SECRET", "test-secret")
+
+	repo := &mockAuthRepository{
+		findOrCreateUserByEmail: func(_ context.Context, email string) (*repository.AuthUser, error) {
+			return &repository.AuthUser{ID: 2, Email: email}, nil
+		},
+		saveRefreshToken: func(_ context.Context, _ uint, _ string, _ time.Time) error { return nil },
+	}
+	uc := newTestUsecase(repo)
+	uc.validateGoogleToken = func(_ context.Context, _, _ string) (string, error) {
+		return "google@example.com", nil
+	}
+
+	pair, err := uc.LoginWithGoogle(context.Background(), "valid-google-token")
+	require.NoError(t, err)
+	assert.NotEmpty(t, pair.AccessToken)
+	assert.NotEmpty(t, pair.RefreshToken)
+}
+
+func TestLoginWithGoogle_InvalidToken(t *testing.T) {
+	repo := &mockAuthRepository{}
+	uc := newTestUsecase(repo)
+	uc.validateGoogleToken = func(_ context.Context, _, _ string) (string, error) {
+		return "", errors.New("invalid token")
+	}
+
+	_, err := uc.LoginWithGoogle(context.Background(), "bad-token")
+	assert.ErrorIs(t, err, ErrInvalidGoogleToken)
+}
+
+// --- RefreshToken ---
+
+func TestRefreshToken_Success(t *testing.T) {
+	t.Setenv("JWT_SECRET", "test-secret")
+
+	repo := &mockAuthRepository{
+		findRefreshToken: func(_ context.Context, token string) (*repository.RefreshTokenRecord, error) {
+			return &repository.RefreshTokenRecord{
+				UserID:    1,
+				Token:     token,
+				ExpiresAt: time.Now().Add(7 * 24 * time.Hour),
+			}, nil
+		},
+		saveRefreshToken: func(_ context.Context, _ uint, _ string, _ time.Time) error { return nil },
+	}
+	uc := newTestUsecase(repo)
+
+	pair, err := uc.RefreshToken(context.Background(), "valid-refresh-token")
+	require.NoError(t, err)
+	assert.NotEmpty(t, pair.AccessToken)
+	assert.NotEmpty(t, pair.RefreshToken)
+}
+
+func TestRefreshToken_TokenNotFound(t *testing.T) {
+	repo := &mockAuthRepository{
+		findRefreshToken: func(_ context.Context, _ string) (*repository.RefreshTokenRecord, error) {
+			return nil, nil
+		},
+	}
+	uc := newTestUsecase(repo)
+
+	_, err := uc.RefreshToken(context.Background(), "unknown-token")
+	assert.ErrorIs(t, err, ErrInvalidRefreshToken)
+}
+
+func TestRefreshToken_Expired(t *testing.T) {
+	repo := &mockAuthRepository{
+		findRefreshToken: func(_ context.Context, token string) (*repository.RefreshTokenRecord, error) {
+			return &repository.RefreshTokenRecord{
+				UserID:    1,
+				Token:     token,
+				ExpiresAt: time.Now().Add(-1 * time.Hour),
+			}, nil
+		},
+	}
+	uc := newTestUsecase(repo)
+
+	_, err := uc.RefreshToken(context.Background(), "expired-token")
+	assert.ErrorIs(t, err, ErrInvalidRefreshToken)
+}
+
+// --- Logout ---
+
+func TestLogout_Success(t *testing.T) {
+	repo := &mockAuthRepository{
+		deleteRefreshToken: func(_ context.Context, _ string) error { return nil },
+	}
+	uc := newTestUsecase(repo)
+
+	err := uc.Logout(context.Background(), "some-refresh-token")
+	require.NoError(t, err)
+}
+
+func TestLogout_RepositoryError(t *testing.T) {
+	dbErr := errors.New("db error")
+	repo := &mockAuthRepository{
+		deleteRefreshToken: func(_ context.Context, _ string) error { return dbErr },
+	}
+	uc := newTestUsecase(repo)
+
+	err := uc.Logout(context.Background(), "some-token")
+	assert.ErrorIs(t, err, dbErr)
+}

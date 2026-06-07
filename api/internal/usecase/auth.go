@@ -16,6 +16,7 @@ import (
 	"google.golang.org/api/idtoken"
 )
 
+
 var (
 	ErrEmailAlreadyExists  = errors.New("email already exists")
 	ErrInvalidCredentials  = errors.New("invalid credentials")
@@ -38,12 +39,29 @@ type TokenPair struct {
 	RefreshToken string
 }
 
+// googleTokenValidator abstracts idtoken.Validate for testability.
+type googleTokenValidator func(ctx context.Context, idToken, audience string) (email string, err error)
+
 type authUsecase struct {
-	authRepo repository.AuthRepository
+	authRepo            repository.AuthRepository
+	validateGoogleToken googleTokenValidator
 }
 
 func NewAuthUsecase(authRepo repository.AuthRepository) AuthUsecase {
-	return &authUsecase{authRepo: authRepo}
+	return &authUsecase{
+		authRepo: authRepo,
+		validateGoogleToken: func(ctx context.Context, idToken, audience string) (string, error) {
+			payload, err := idtoken.Validate(ctx, idToken, audience)
+			if err != nil {
+				return "", err
+			}
+			email, ok := payload.Claims["email"].(string)
+			if !ok || email == "" {
+				return "", errors.New("no email claim")
+			}
+			return email, nil
+		},
+	}
 }
 
 func (u *authUsecase) Register(ctx context.Context, email, password string) error {
@@ -107,17 +125,8 @@ func (u *authUsecase) VerifyOTP(ctx context.Context, email, code string) (*Token
 
 func (u *authUsecase) LoginWithGoogle(ctx context.Context, rawIDToken string) (*TokenPair, error) {
 	clientID := os.Getenv("GOOGLE_CLIENT_ID")
-	payload, err := idtoken.Validate(ctx, rawIDToken, clientID)
+	email, err := u.validateGoogleToken(ctx, rawIDToken, clientID)
 	if err != nil {
-		return nil, ErrInvalidGoogleToken
-	}
-
-	emailVal, ok := payload.Claims["email"]
-	if !ok {
-		return nil, ErrInvalidGoogleToken
-	}
-	email, ok := emailVal.(string)
-	if !ok || email == "" {
 		return nil, ErrInvalidGoogleToken
 	}
 
