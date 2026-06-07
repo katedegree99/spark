@@ -1,4 +1,4 @@
-.PHONY: up down restart web schema mock
+.PHONY: up down restart web schema mock generate
 
 NVM_NODE := $(HOME)/.nvm/versions/node/v24.16.0/bin
 
@@ -20,3 +20,7 @@ schema:
 
 mock:
 	cd schema && PATH="$(NVM_NODE):$$PATH" bun run mock
+
+generate:
+	cd web && bun run generate
+	cd api && PATH="$$PATH:$$(go env GOPATH)/bin" oapi-codegen --config=oapi-codegen.yaml ../schema/openapi/openapi.yaml

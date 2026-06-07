@@ -1,0 +1,8 @@
+package: generated
+generate:
+  echo-server: true
+  models: true
+  strict-server: true
+output: pkg/generated/api.gen.go
+import-mapping:
+  ../schema/openapi/openapi.yaml: github.com/katedegree/spark/api/pkg/generated
