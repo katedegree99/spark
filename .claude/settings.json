@@ -6,7 +6,8 @@
   "permissions": {
     "allow": [
       "Bash(git push origin *)",
-      "Bash(git -C * push origin *)"
+      "Bash(git -C * push origin *)",
+      "Write(.claude/skills/*)"
     ],
     "deny": [
       "Bash(git push --force*)",
