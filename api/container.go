@@ -1,4 +1,4 @@
-package di
+package main
 
 import (
 	"github.com/katedegree/spark/api/internal/adapter/handler"
