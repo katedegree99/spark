@@ -16,7 +16,7 @@ web:
 	cd web && bun run dev
 
 schema:
-	cd schema && PATH=$(NVM_NODE):$(PATH) bun run preview
+	cd schema && PATH="$(NVM_NODE):$$PATH" bun run preview
 
 mock:
-	cd schema && PATH=$(NVM_NODE):$(PATH) bun run mock
+	cd schema && PATH="$(NVM_NODE):$$PATH" bun run mock
