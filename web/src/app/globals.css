@@ -1,26 +1,55 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+	--background: #ffffff;
+	--foreground: #171717;
+
+	/* --- Design tokens (Figma) --- */
+	/* brand */
+	--brand-yellow: #f7c948;
+	--brand-orange: #f0a243;
+	--brand-red: #e07a5f;
+	/* text: text/secondary */
+	--secondary: #a7a7a7;
+	/* border: border/default */
+	--border: #dddddd;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+	--color-background: var(--background);
+	--color-foreground: var(--foreground);
+	--font-sans: var(--font-geist-sans);
+	--font-mono: var(--font-geist-mono);
+
+	/* --- Design tokens → utilities ---
+     spacing / font-size / font-weight / radius(12px=rounded-xl) は
+     Tailwind デフォルトと一致するため未定義。色のみ追加する。 */
+	--color-brand-yellow: var(--brand-yellow);
+	--color-brand-orange: var(--brand-orange);
+	--color-brand-red: var(--brand-red);
+	--color-secondary: var(--secondary);
+	--color-border: var(--border);
+}
+
+/* メインボタン等のブランドグラデーション(orange → yellow、右下方向)
+   Figma: Design/Semantic/bg/mainToRightBottom */
+@utility bg-brand-gradient {
+	background-image: linear-gradient(
+		to bottom right,
+		var(--brand-orange),
+		var(--brand-yellow)
+	);
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+	:root {
+		--background: #0a0a0a;
+		--foreground: #ededed;
+	}
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+	background: var(--background);
+	color: var(--foreground);
+	font-family: Arial, Helvetica, sans-serif;
 }
