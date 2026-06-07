@@ -16,3 +16,4 @@
 |---|---|
 | `gh-login/SKILL.md` | **GitHub CLI 認証確認 skill**。`gh auth status` で認証状態を確認し、未ログインなら `! gh auth login` の実行を案内する。PR 作成など `gh` を使う操作の前、または `/gh-login` 明示起動 |
 | `google-login/SKILL.md` | **Google OAuth 認証情報セットアップ skill**。Secret Manager への client_id / secret の格納状況を確認し、未設定なら gcloud コマンドで設定する手順を案内する。Google ログイン実装前、または `/google-login` 明示起動 |
+| `push/SKILL.md` | **コミット＆プッシュ skill**。差分を確認して日本語でコミットメッセージを生成し、ユーザー確認後に `git commit` → `git push` まで実行する。`/push` 明示起動のみ（自動起動しない） |
