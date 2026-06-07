@@ -1,0 +1,18 @@
+{
+  "statusLine": {
+    "type": "command",
+    "command": "sh .claude/statusline-command.sh"
+  },
+  "permissions": {
+    "allow": [
+      "Bash(git push origin *)",
+      "Bash(git -C * push origin *)"
+    ],
+    "deny": [
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Bash(git -C * push --force*)",
+      "Bash(git -C * push -f*)"
+    ]
+  }
+}
