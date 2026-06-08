@@ -24,8 +24,11 @@ web/src/
       store.ts           #   この機能専用の zustand store(任意)
   hooks/                # 複数機能で共有するカスタムフック
   lib/
-    api/                # ★ orval 生成物。手で編集しない (generated.ts / model/)
-    <その他共有ライブラリ> # api クライアント設定・サーバ専用ヘルパ等
+    api/
+      generated/        # ★ orval 生成物 (client.ts / model/)。手で編集しない
+      fetcher.ts        #   手書き共通フェッチャ apiFetch (ApiResult を返す/サーバ専用)
+    auth/               # 認証セッション(httpOnly Cookie)管理。サーバ専用
+    <その他共有ライブラリ> # サーバ専用ヘルパ等
   stores/               # 横断的(グローバル)な zustand store
   utils/                # 純粋関数ユーティリティ (cn.ts など)
 ```
@@ -57,8 +60,10 @@ web/src/
 | `hooks/` | その機能専用フック(任意) |
 | `store.ts` | その機能のクライアント状態(任意・zustand) |
 
-- API 呼び出しは `lib/api/`(orval 生成の SWR フック)を使う。**`features/` 内で API 型やフックを再定義しない**。
-- 認証のトークン保管方式(httpOnly Cookie + Route Handler/Proxy か、クライアント保持か)は **`nextjs-best-practices.md` の論点が未確定**。確定するまで `localStorage` に入れない。
+- API の型は `lib/api/generated/`(orval 生成)を使う。**`features/` 内で API 型を再定義しない**。
+- 変更系(mutation: register/login/otp/google 等)は **Server Action から `lib/api/fetcher.ts` の `apiFetch` で backend に server-to-server で叩く**。トークンを httpOnly Cookie に隔離するため、この経路に通す。
+- **orval 生成の SWR フック(`generated/client.ts`)は認証では使わない**。ブラウザ直叩きはトークンを JS に露出させるため。当初は SWR フック直叩きを想定していたが(下記の経緯)、トークン隔離を優先して Server Action 経由に振り切った。生成 SWR フックは将来の「認証後の参照系(GET)」用に温存する。
+- トークンは httpOnly Cookie に保管し、ブラウザ JS には載せない(`localStorage` に入れない)。
 
 ## `app/` の設計(ルーティング)
 
@@ -92,4 +97,4 @@ app/
 
 - パスエイリアスは `@/`(= `web/src/`)。例: `import { cn } from "@/utils/cn";`
 - ディレクトリ名・ファイル名は **kebab-case**(例: `ui-store.ts`、`login-form.tsx`)。React コンポーネントの export 名は PascalCase。
-- `lib/api/generated.ts` と `lib/api/model/` は **生成物 — 手で編集しない**(orval が `clean: true` で毎回上書き)。型を変えるときは `schema/openapi/openapi.yaml` を編集 → `bun run generate`。
+- `lib/api/generated/`(`client.ts` / `model/`)は **生成物 — 手で編集しない**(orval が `clean: true` で毎回上書き)。型を変えるときは `schema/openapi/openapi.yaml` を編集 → `bun run generate`。手書きの `fetcher.ts` は生成物と分離するため `generated/` の外(`lib/api/` 直下)に置く(同居すると `clean` で消える)。
