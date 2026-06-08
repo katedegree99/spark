@@ -87,9 +87,14 @@ func (u *authUsecase) Register(ctx context.Context, email, password string) erro
 
 	code := fmt.Sprintf("%06d", mathrand.IntN(1000000))
 	if err := u.authRepo.SaveOTP(ctx, email, code); err != nil {
+		_ = u.authRepo.DeleteUserByEmail(ctx, email)
 		return err
 	}
-	return u.emailSvc.SendOTP(ctx, email, code)
+	if err := u.emailSvc.SendOTP(ctx, email, code); err != nil {
+		_ = u.authRepo.DeleteUserByEmail(ctx, email)
+		return err
+	}
+	return nil
 }
 
 func (u *authUsecase) Login(ctx context.Context, email, password string) error {

@@ -28,10 +28,11 @@ services:
       - db-data:/var/lib/mysql
       - ./migrations:/docker-entrypoint-initdb.d
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uspark", "-pspark"]
+      test: ["CMD", "mysql", "-h", "127.0.0.1", "-uspark", "-pspark", "-e", "SELECT 1"]
       interval: 5s
       timeout: 5s
-      retries: 10
+      retries: 20
+      start_period: 30s
 
 volumes:
   db-data:

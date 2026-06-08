@@ -49,6 +49,10 @@ func (r *authRepository) CreateUser(ctx context.Context, email, hashedPassword s
 	}, nil
 }
 
+func (r *authRepository) DeleteUserByEmail(ctx context.Context, email string) error {
+	return r.db.WithContext(ctx).Where("email = ?", email).Delete(&model.User{}).Error
+}
+
 func (r *authRepository) FindOrCreateUserByEmail(ctx context.Context, email string) (*domainrepo.AuthUser, error) {
 	user := model.User{Email: email, HashedPassword: ""}
 	if err := r.db.WithContext(ctx).Where(model.User{Email: email}).FirstOrCreate(&user).Error; err != nil {

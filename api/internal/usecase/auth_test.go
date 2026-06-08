@@ -27,6 +27,7 @@ func (m *mockEmailService) SendOTP(ctx context.Context, to, code string) error {
 type mockAuthRepository struct {
 	findUserByEmail         func(ctx context.Context, email string) (*repository.AuthUser, error)
 	createUser              func(ctx context.Context, email, hashedPassword string) (*repository.AuthUser, error)
+	deleteUserByEmail       func(ctx context.Context, email string) error
 	findOrCreateUserByEmail func(ctx context.Context, email string) (*repository.AuthUser, error)
 	saveOTP                 func(ctx context.Context, email, code string) error
 	verifyOTP               func(ctx context.Context, email, code string) (bool, error)
@@ -40,6 +41,12 @@ func (m *mockAuthRepository) FindUserByEmail(ctx context.Context, email string) 
 }
 func (m *mockAuthRepository) CreateUser(ctx context.Context, email, hashedPassword string) (*repository.AuthUser, error) {
 	return m.createUser(ctx, email, hashedPassword)
+}
+func (m *mockAuthRepository) DeleteUserByEmail(ctx context.Context, email string) error {
+	if m.deleteUserByEmail != nil {
+		return m.deleteUserByEmail(ctx, email)
+	}
+	return nil
 }
 func (m *mockAuthRepository) FindOrCreateUserByEmail(ctx context.Context, email string) (*repository.AuthUser, error) {
 	return m.findOrCreateUserByEmail(ctx, email)

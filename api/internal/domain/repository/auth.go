@@ -8,6 +8,7 @@ import (
 type AuthRepository interface {
 	FindUserByEmail(ctx context.Context, email string) (*AuthUser, error)
 	CreateUser(ctx context.Context, email, hashedPassword string) (*AuthUser, error)
+	DeleteUserByEmail(ctx context.Context, email string) error
 	FindOrCreateUserByEmail(ctx context.Context, email string) (*AuthUser, error)
 	SaveOTP(ctx context.Context, email, code string) error
 	VerifyOTP(ctx context.Context, email, code string) (bool, error)
