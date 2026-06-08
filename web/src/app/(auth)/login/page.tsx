@@ -16,7 +16,7 @@ export default function LoginPage() {
 					src="/images/auth-header.svg"
 					alt=""
 					aria-hidden="true"
-					className="h-[144px] w-full object-cover"
+					className="h-[144px] w-full object-fill"
 				/>
 			</div>
 
