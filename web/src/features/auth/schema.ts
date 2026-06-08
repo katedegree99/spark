@@ -10,8 +10,8 @@ import { z } from "zod";
 
 /** ログインフォーム: email(メール形式) + password(必須)。 */
 export const loginSchema = z.object({
-	email: z.email({ error: "メールアドレスの形式が正しくありません" }),
-	password: z.string().min(1, { error: "パスワードを入力してください" }),
+	email: z.email({ error: "形式が正しくありません" }),
+	password: z.string().min(1, { error: "入力してください" }),
 });
 
 /**
@@ -21,13 +21,9 @@ export const loginSchema = z.object({
  */
 export const registerSchema = z
 	.object({
-		email: z.email({ error: "メールアドレスの形式が正しくありません" }),
-		password: z
-			.string()
-			.min(8, { error: "パスワードは8文字以上で入力してください" }),
-		confirmPassword: z
-			.string()
-			.min(1, { error: "確認用パスワードを入力してください" }),
+		email: z.email({ error: "形式が正しくありません" }),
+		password: z.string().min(8, { error: "8文字以上で入力してください" }),
+		confirmPassword: z.string().min(1, { error: "入力してください" }),
 	})
 	.refine((data) => data.password === data.confirmPassword, {
 		error: "パスワードが一致しません",

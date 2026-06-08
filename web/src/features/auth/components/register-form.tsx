@@ -53,15 +53,20 @@ export function RegisterForm() {
 		<form onSubmit={onSubmit} className="mt-7 flex flex-1 flex-col md:mt-5">
 			<div className="order-1 flex flex-col gap-4">
 				<div className="flex flex-col gap-1">
-					<div className="flex items-baseline justify-between gap-2">
-						<label htmlFor="email" className="font-semibold text-ink text-sm">
+					<div className="flex items-stretch gap-2">
+						<label
+							htmlFor="email"
+							className="shrink-0 font-semibold text-ink text-sm"
+						>
 							メールアドレス
 						</label>
-						{errors.email ? (
-							<span className="text-error text-sm text-right">
-								{errors.email.message}
-							</span>
-						) : null}
+						<div className="relative min-w-0 flex-1">
+							{errors.email ? (
+								<span className="absolute right-0 bottom-0 z-10 w-full text-error text-sm text-right leading-tight">
+									{errors.email.message}
+								</span>
+							) : null}
+						</div>
 					</div>
 					<Input
 						id="email"
@@ -75,18 +80,20 @@ export function RegisterForm() {
 				</div>
 
 				<div className="flex flex-col gap-1">
-					<div className="flex items-baseline justify-between gap-2">
+					<div className="flex items-stretch gap-2">
 						<label
 							htmlFor="password"
-							className="font-semibold text-ink text-sm"
+							className="shrink-0 font-semibold text-ink text-sm"
 						>
 							パスワード
 						</label>
-						{errors.password ? (
-							<span className="text-error text-sm text-right">
-								{errors.password.message}
-							</span>
-						) : null}
+						<div className="relative min-w-0 flex-1">
+							{errors.password ? (
+								<span className="absolute right-0 bottom-0 z-10 w-full text-error text-sm text-right leading-tight">
+									{errors.password.message}
+								</span>
+							) : null}
+						</div>
 					</div>
 					<PasswordInput
 						id="password"
@@ -98,18 +105,20 @@ export function RegisterForm() {
 				</div>
 
 				<div className="flex flex-col gap-1">
-					<div className="flex items-baseline justify-between gap-2">
+					<div className="flex items-stretch gap-2">
 						<label
 							htmlFor="confirmPassword"
-							className="font-semibold text-ink text-sm"
+							className="shrink-0 font-semibold text-ink text-sm"
 						>
 							パスワード確認用
 						</label>
-						{errors.confirmPassword ? (
-							<span className="text-error text-sm text-right">
-								{errors.confirmPassword.message}
-							</span>
-						) : null}
+						<div className="relative min-w-0 flex-1">
+							{errors.confirmPassword ? (
+								<span className="absolute right-0 bottom-0 z-10 w-full text-error text-sm text-right leading-tight">
+									{errors.confirmPassword.message}
+								</span>
+							) : null}
+						</div>
 					</div>
 					<PasswordInput
 						id="confirmPassword"
