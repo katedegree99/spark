@@ -9,7 +9,7 @@
 import "server-only";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import type { AuthTokensResponse } from "@/lib/api/model";
+import type { AuthTokensResponse } from "@/lib/api/generated/model";
 
 const ACCESS_TOKEN = "access_token";
 const REFRESH_TOKEN = "refresh_token";

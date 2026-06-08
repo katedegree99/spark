@@ -7,8 +7,11 @@ export default defineConfig({
     },
     output: {
       client: 'swr',
-      target: './src/lib/api/generated.ts',
-      schemas: './src/lib/api/model',
+      // 生成物は generated/ 配下に隔離する。orval の clean は target の出力
+      // フォルダを丸ごと掃除するため、手書きの fetcher.ts 等を同居させると
+      // generate のたびに消える。生成物だけを generated/ に閉じ込めて回避する。
+      target: './src/lib/api/generated/client.ts',
+      schemas: './src/lib/api/generated/model',
       clean: true,
     },
   },

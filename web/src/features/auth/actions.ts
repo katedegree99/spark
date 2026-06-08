@@ -1,5 +1,6 @@
 "use server";
 
+import { authErrorMessage } from "@/features/auth/errors";
 import {
 	type LoginInput,
 	loginSchema,
@@ -15,7 +16,7 @@ import type {
 	OtpSentResponse,
 	OtpVerifyRequest,
 	RegisterRequest,
-} from "@/lib/api/model";
+} from "@/lib/api/generated/model";
 import { setAuthCookies } from "@/lib/auth/session";
 
 /** OTP 送信系(register/login)の戻り値。成功時は次ステップ用の宛先メールを返す。 */
@@ -54,12 +55,12 @@ export async function registerAction(
 	if (res.ok) {
 		return { ok: true, email };
 	}
-	if (res.status === 409) {
-		return { ok: false, message: "このメールアドレスは既に登録されています" };
-	}
 	return {
 		ok: false,
-		message: "登録に失敗しました。時間をおいて再度お試しください",
+		message: authErrorMessage(
+			res.error,
+			"登録に失敗しました。時間をおいて再度お試しください",
+		),
 	};
 }
 
@@ -85,15 +86,12 @@ export async function loginAction(
 	if (res.ok) {
 		return { ok: true, email: parsed.data.email };
 	}
-	if (res.status === 401) {
-		return {
-			ok: false,
-			message: "メールアドレスまたはパスワードが正しくありません",
-		};
-	}
 	return {
 		ok: false,
-		message: "ログインに失敗しました。時間をおいて再度お試しください",
+		message: authErrorMessage(
+			res.error,
+			"ログインに失敗しました。時間をおいて再度お試しください",
+		),
 	};
 }
 
@@ -125,12 +123,12 @@ export async function verifyOtpAction(input: {
 		await setAuthCookies(res.data);
 		return { ok: true };
 	}
-	if (res.status === 400) {
-		return { ok: false, message: "認証コードが正しくありません" };
-	}
 	return {
 		ok: false,
-		message: "認証に失敗しました。時間をおいて再度お試しください",
+		message: authErrorMessage(
+			res.error,
+			"認証に失敗しました。時間をおいて再度お試しください",
+		),
 	};
 }
 
@@ -159,11 +157,11 @@ export async function googleLoginAction(
 		await setAuthCookies(res.data);
 		return { ok: true };
 	}
-	if (res.status === 401) {
-		return { ok: false, message: "Google アカウントの認証に失敗しました" };
-	}
 	return {
 		ok: false,
-		message: "Google ログインに失敗しました。時間をおいて再度お試しください",
+		message: authErrorMessage(
+			res.error,
+			"Google ログインに失敗しました。時間をおいて再度お試しください",
+		),
 	};
 }

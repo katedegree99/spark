@@ -7,7 +7,10 @@
  * `server-only` でクライアントからの誤 import をビルド時に弾く。
  */
 import "server-only";
-import type { ErrorResponse, ValidationErrorResponse } from "@/lib/api/model";
+import type {
+	ErrorResponse,
+	ValidationErrorResponse,
+} from "@/lib/api/generated/model";
 import { getAccessToken } from "@/lib/auth/session";
 
 const API_BASE_URL = process.env.API_BASE_URL ?? "http://localhost:3001";
