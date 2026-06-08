@@ -1,4 +1,5 @@
 import { cva, type VariantProps } from "class-variance-authority";
+import { Loader2 } from "lucide-react";
 import { forwardRef } from "react";
 import { cn } from "@/utils/cn";
 
@@ -28,21 +29,45 @@ const buttonVariants = cva(
 );
 
 export type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> &
-	VariantProps<typeof buttonVariants>;
+	VariantProps<typeof buttonVariants> & {
+		/** 処理中。スピナーを表示し、`disabled` を強制する。 */
+		loading?: boolean;
+	};
 
 /**
  * メインボタン。`cva` バリアント (`gradient` / `size` / `fullWidth`) を持ち、
  * ネイティブ `<button>` props を透過する。非活性時は `disabled:opacity-50`。
+ * `loading` 中はスピナー表示 + 自動で非活性化する。
  */
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-	({ className, variant, size, fullWidth, type = "button", ...props }, ref) => {
+	(
+		{
+			className,
+			variant,
+			size,
+			fullWidth,
+			loading,
+			disabled,
+			type = "button",
+			children,
+			...props
+		},
+		ref,
+	) => {
 		return (
 			<button
 				ref={ref}
 				type={type}
+				disabled={disabled || loading}
+				aria-busy={loading || undefined}
 				className={cn(buttonVariants({ variant, size, fullWidth }), className)}
 				{...props}
-			/>
+			>
+				{loading ? (
+					<Loader2 className="size-5 animate-spin" aria-hidden="true" />
+				) : null}
+				{children}
+			</button>
 		);
 	},
 );
