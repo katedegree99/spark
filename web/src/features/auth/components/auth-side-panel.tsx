@@ -6,7 +6,7 @@ import Image from "next/image";
  */
 export function AuthSidePanel() {
 	return (
-		<div className="relative flex h-full w-full flex-col overflow-hidden rounded-[28px] bg-brand-panel p-12 text-white">
+		<div className="relative flex h-full w-full flex-col overflow-hidden rounded-[28px] bg-brand-panel p-8 text-white lg:p-12">
 			<div className="flex items-center gap-2.5">
 				<Image
 					src="/images/spark-logo.png"
@@ -18,7 +18,7 @@ export function AuthSidePanel() {
 				<span className="font-bold text-[40px] tracking-[1.6px]">SPARK</span>
 			</div>
 
-			<div className="absolute inset-x-12 top-[45%] flex flex-col gap-6">
+			<div className="absolute inset-x-8 top-[45%] flex flex-col gap-6 lg:inset-x-12">
 				<div className="flex items-center gap-2.5">
 					<span className="h-px w-6 bg-white" />
 					<span className="font-semibold text-lg">WELCOME TO SPARK</span>
