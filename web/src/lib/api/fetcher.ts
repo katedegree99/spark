@@ -2,7 +2,7 @@
  * サーバ専用 API フェッチャ。Server Action / Route Handler からのみ使う。
  *
  * backend へ server-to-server で直接アクセスする(ブラウザの rewrite プロキシは経由しない)。
- * baseURL は `next.config.ts` の rewrite と同じ `API_BASE_URL` を流用する。
+ * baseURL は `next.config.ts` の rewrite と同じ `NEXT_PUBLIC_API_URL`(tech-stack 規約)を流用する。
  * トークンを httpOnly Cookie に隔離するため、auth の mutation はこの経路に通す。
  * `server-only` でクライアントからの誤 import をビルド時に弾く。
  */
@@ -13,7 +13,7 @@ import type {
 } from "@/lib/api/generated/model";
 import { getAccessToken } from "@/lib/auth/session";
 
-const API_BASE_URL = process.env.API_BASE_URL ?? "http://localhost:3001";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
 export type ApiResult<T> =
 	| { ok: true; status: number; data: T }
