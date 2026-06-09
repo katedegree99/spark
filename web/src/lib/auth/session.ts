@@ -15,7 +15,16 @@ const ACCESS_TOKEN = "access_token";
 const REFRESH_TOKEN = "refresh_token";
 
 const ACCESS_FALLBACK_MAX_AGE = 60 * 15; // 15分(API が expires_in を返さない場合)
-const REFRESH_MAX_AGE = 60 * 60 * 24 * 30; // 30日
+// backend の refresh token DB 有効期限(7日)に合わせる。長くすると Cookie だけ
+// 生き残り「Cookie はあるが refresh は失効」状態になるため一致させること。
+const REFRESH_MAX_AGE = 60 * 60 * 24 * 7; // 7日
+
+// TODO(次PR): access 失効時の自動リフレッシュが未実装。
+// refresh token を保存しているが /auth/refresh を叩く経路が無く、access が
+// 15分で切れると refresh が生きていても requireSession が /login へ飛ばす。
+// App Router は Server Component 描画中に Cookie を書けないため、Middleware で
+// 「access 無 & refresh 有 → /auth/refresh で更新して response に Cookie セット」
+// を先回り実装する(あわせて logoutAction + clearAuthCookies の配線も行う)。
 
 /**
  * トークンを httpOnly Cookie に保存する。
