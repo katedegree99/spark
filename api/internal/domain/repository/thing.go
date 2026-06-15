@@ -1,6 +1,9 @@
 package repository
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
 type ThingRepository interface {
 	Search(ctx context.Context, q string) ([]*ThingRecord, error)
@@ -12,7 +15,8 @@ type ThingRepository interface {
 }
 
 type ThingRecord struct {
-	ID      uint
-	Name    string
-	Aliases []string
+	ID        uint
+	Name      string
+	Aliases   []string
+	CreatedAt time.Time
 }

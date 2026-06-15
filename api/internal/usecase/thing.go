@@ -23,9 +23,16 @@ func NewThingUsecase(thingRepo repository.ThingRepository) ThingUsecase {
 }
 
 func (u *thingUsecase) Search(ctx context.Context, q string) ([]*repository.ThingRecord, error) {
-	panic("not implemented")
+	return u.thingRepo.Search(ctx, q)
 }
 
 func (u *thingUsecase) Create(ctx context.Context, name string) (*repository.ThingRecord, error) {
-	panic("not implemented")
+	existing, err := u.thingRepo.FindByName(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	if existing != nil {
+		return nil, ErrThingAlreadyExists
+	}
+	return u.thingRepo.Create(ctx, name)
 }
