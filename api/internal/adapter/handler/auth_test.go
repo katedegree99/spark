@@ -46,7 +46,10 @@ func (m *mockAuthUsecase) Logout(ctx context.Context, refreshToken string) error
 }
 
 func newTestEcho(uc usecase.AuthUsecase) *echo.Echo {
-	h := handler.NewAuthHandler(uc)
+	authHandler := handler.NewAuthHandler(uc)
+	h := &handler.Handler{
+		AuthHandler: authHandler,
+	}
 	return router.NewRouter(h)
 }
 

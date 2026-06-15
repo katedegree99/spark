@@ -50,13 +50,105 @@ func NewProfileUsecase(
 }
 
 func (u *profileUsecase) Create(ctx context.Context, userID uint, input ProfileInput) (*ProfileResult, error) {
-	panic("not implemented")
+	exists, err := u.profileRepo.ExistsByUserID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	if exists {
+		return nil, ErrProfileAlreadyExists
+	}
+
+	p := &repository.ProfileRecord{
+		UserID:      userID,
+		Name:        input.Name,
+		Bio:         input.Bio,
+		IconImageID: input.IconImageID,
+	}
+	if err := u.profileRepo.Create(ctx, p); err != nil {
+		return nil, err
+	}
+
+	if err := u.profileRepo.SetDoings(ctx, userID, input.DoingIDs); err != nil {
+		return nil, err
+	}
+	if err := u.profileRepo.SetWants(ctx, userID, input.WantIDs); err != nil {
+		return nil, err
+	}
+
+	return u.Get(ctx, userID)
 }
 
 func (u *profileUsecase) Get(ctx context.Context, userID uint) (*ProfileResult, error) {
-	panic("not implemented")
+	p, err := u.profileRepo.FindByUserID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	if p == nil {
+		return nil, ErrProfileNotFound
+	}
+
+	doingIDs, err := u.profileRepo.FindDoingIDsByUserID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	var doings []*repository.ThingRecord
+	if len(doingIDs) > 0 {
+		doings, err = u.thingRepo.FindByIDs(ctx, doingIDs)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	wantIDs, err := u.profileRepo.FindWantIDsByUserID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	var wants []*repository.ThingRecord
+	if len(wantIDs) > 0 {
+		wants, err = u.thingRepo.FindByIDs(ctx, wantIDs)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	var image *repository.ImageRecord
+	if p.IconImageID != nil {
+		image, err = u.imageRepo.FindByID(ctx, *p.IconImageID)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return &ProfileResult{
+		Profile: p,
+		Doings:  doings,
+		Wants:   wants,
+		Image:   image,
+	}, nil
 }
 
 func (u *profileUsecase) Update(ctx context.Context, userID uint, input ProfileInput) (*ProfileResult, error) {
-	panic("not implemented")
+	p, err := u.profileRepo.FindByUserID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	if p == nil {
+		return nil, ErrProfileNotFound
+	}
+
+	p.Name = input.Name
+	p.Bio = input.Bio
+	p.IconImageID = input.IconImageID
+
+	if err := u.profileRepo.Update(ctx, p); err != nil {
+		return nil, err
+	}
+	if err := u.profileRepo.SetDoings(ctx, userID, input.DoingIDs); err != nil {
+		return nil, err
+	}
+	if err := u.profileRepo.SetWants(ctx, userID, input.WantIDs); err != nil {
+		return nil, err
+	}
+
+	return u.Get(ctx, userID)
 }

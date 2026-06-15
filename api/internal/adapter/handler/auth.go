@@ -78,10 +78,11 @@ func (h *AuthHandler) VerifyOtp(ctx context.Context, req generated.VerifyOtpRequ
 	expiresIn := 900
 	tokenType := generated.Bearer
 	return generated.VerifyOtp200JSONResponse{
-		AccessToken:  &pair.AccessToken,
-		RefreshToken: &pair.RefreshToken,
-		ExpiresIn:    &expiresIn,
-		TokenType:    &tokenType,
+		AccessToken:   &pair.AccessToken,
+		RefreshToken:  &pair.RefreshToken,
+		ExpiresIn:     &expiresIn,
+		TokenType:     &tokenType,
+		ProfileExists: &pair.ProfileExists,
 	}, nil
 }
 
@@ -100,10 +101,11 @@ func (h *AuthHandler) LoginWithGoogle(ctx context.Context, req generated.LoginWi
 	expiresIn := 900
 	tokenType := generated.Bearer
 	return generated.LoginWithGoogle200JSONResponse{
-		AccessToken:  &pair.AccessToken,
-		RefreshToken: &pair.RefreshToken,
-		ExpiresIn:    &expiresIn,
-		TokenType:    &tokenType,
+		AccessToken:   &pair.AccessToken,
+		RefreshToken:  &pair.RefreshToken,
+		ExpiresIn:     &expiresIn,
+		TokenType:     &tokenType,
+		ProfileExists: &pair.ProfileExists,
 	}, nil
 }
 
