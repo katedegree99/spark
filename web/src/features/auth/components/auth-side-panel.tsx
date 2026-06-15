@@ -28,7 +28,7 @@ export function AuthSidePanel() {
 					<br />
 					１対１でつながる。
 				</h2>
-				<p className="font-semibold text-base leading-relaxed tracking-wide">
+				<p className="font-semibold text-base leading-relaxed tracking-[0.8px]">
 					いま夢中なこと、これから挑戦したいこと。
 					<br />
 					やっていること・やりたいことが重なる人と、1on1でじっっくり話せます。
