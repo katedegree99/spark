@@ -26,7 +26,6 @@ import { useAuthFlowStore } from "@/features/auth/store";
 export function OtpForm() {
 	const router = useRouter();
 	const pendingEmail = useAuthFlowStore((s) => s.pendingEmail);
-	const setPendingEmail = useAuthFlowStore((s) => s.setPendingEmail);
 	const hasHydrated = useAuthFlowStore((s) => s.hasHydrated);
 	const [formError, setFormError] = useState<string | null>(null);
 
@@ -55,15 +54,12 @@ export function OtpForm() {
 			return;
 		}
 		setFormError(null);
-		// 検証成功時、トークンは Server Action 側で httpOnly Cookie に保存される。
+		// 検証成功時、トークンの Cookie 保存と /home への遷移は Server Action 側で
+		// 完結する(redirect)。ここに戻るのは失敗時のみなのでエラーだけ拾う。
 		const result = await verifyOtpAction({ email: pendingEmail, code });
-		if (!result.ok) {
+		if (result?.ok === false) {
 			setFormError(result.message);
-			return;
 		}
-		// フロー完了。一時状態(宛先メール)を破棄してから遷移する。
-		setPendingEmail(null);
-		router.push("/home");
 	});
 
 	// sessionStorage 復元前、または宛先メール未保持(リダイレクト確定)の間は
