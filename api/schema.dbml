@@ -1,0 +1,106 @@
+Table users {
+  id              bigint [pk, increment, not null]
+  email           varchar(255) [unique, not null]
+  hashed_password varchar(255) [not null, default: '']
+  created_at      datetime(3) [not null, default: `CURRENT_TIMESTAMP(3)`]
+  updated_at      datetime(3) [not null, default: `CURRENT_TIMESTAMP(3)`]
+
+  indexes {
+    email [unique, name: "uq_users_email"]
+  }
+}
+
+Table otps {
+  id         bigint [pk, increment, not null]
+  email      varchar(255) [not null]
+  code       varchar(6) [not null]
+  expires_at datetime(3) [not null]
+  created_at datetime(3) [not null, default: `CURRENT_TIMESTAMP(3)`]
+
+  indexes {
+    email [name: "idx_otps_email"]
+  }
+
+  Note: 'メール認証用 OTP。user_id は持たず email で紐づく'
+}
+
+Table refresh_tokens {
+  id         bigint [pk, increment, not null]
+  user_id    bigint [not null]
+  token      varchar(255) [unique, not null]
+  expires_at datetime(3) [not null]
+  created_at datetime(3) [not null, default: `CURRENT_TIMESTAMP(3)`]
+
+  indexes {
+    token [unique, name: "uq_refresh_tokens_token"]
+    user_id [name: "idx_refresh_tokens_user_id"]
+  }
+}
+
+Table images {
+  id         bigint [pk, increment, not null]
+  directory  varchar(255) [not null]
+  url        varchar(2048) [not null]
+  created_at datetime(3) [not null, default: `CURRENT_TIMESTAMP(3)`]
+}
+
+Table profiles {
+  user_id       bigint [pk, not null]
+  name          varchar(100) [not null]
+  icon_image_id bigint [null]
+  bio           text [null]
+  created_at    datetime(3) [not null, default: `CURRENT_TIMESTAMP(3)`]
+  updated_at    datetime(3) [not null, default: `CURRENT_TIMESTAMP(3)`]
+}
+
+Table things {
+  id         bigint [pk, increment, not null]
+  name       varchar(100) [unique, not null]
+  created_at datetime(3) [not null, default: `CURRENT_TIMESTAMP(3)`]
+
+  indexes {
+    name [unique, name: "uq_things_name"]
+  }
+}
+
+Table thing_aliases {
+  thing_id bigint [not null]
+  alias    varchar(100) [not null]
+
+  indexes {
+    (thing_id, alias) [pk]
+  }
+
+  Note: '似たものを束ねる正規化キー。1つの thing に複数の alias を紐づけられる'
+}
+
+Table user_doings {
+  user_id  bigint [not null]
+  thing_id bigint [not null]
+
+  indexes {
+    (user_id, thing_id) [pk]
+  }
+
+  Note: 'やっていること'
+}
+
+Table user_wants {
+  user_id  bigint [not null]
+  thing_id bigint [not null]
+
+  indexes {
+    (user_id, thing_id) [pk]
+  }
+
+  Note: 'やってみたいこと'
+}
+
+Ref fk_refresh_tokens_user: refresh_tokens.user_id > users.id [delete: cascade]
+Ref fk_thing_aliases_thing: thing_aliases.thing_id > things.id [delete: cascade]
+Ref fk_profiles_user: profiles.user_id > users.id [delete: cascade]
+Ref fk_profiles_image: profiles.icon_image_id > images.id [delete: set null]
+Ref fk_user_doings_user: user_doings.user_id > users.id [delete: cascade]
+Ref fk_user_doings_thing: user_doings.thing_id > things.id [delete: cascade]
+Ref fk_user_wants_user: user_wants.user_id > users.id [delete: cascade]
+Ref fk_user_wants_thing: user_wants.thing_id > things.id [delete: cascade]

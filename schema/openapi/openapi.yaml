@@ -11,6 +11,12 @@ servers:
 tags:
   - name: auth
     description: 認証
+  - name: images
+    description: 画像アップロード
+  - name: things
+    description: 事柄マスタ
+  - name: profile
+    description: プロフィール
 
 paths:
   /auth/register:
@@ -80,6 +86,7 @@ paths:
       description: |
         メールで送信された6桁のOTPを検証する。
         成功するとアクセストークンとリフレッシュトークンを返す。
+        `profile_exists` が false の場合はプロフィール設定画面へ遷移する。
       operationId: verifyOtp
       requestBody:
         required: true
@@ -110,6 +117,7 @@ paths:
       description: |
         フロントエンドで取得したGoogleのIDトークンを送信する。
         未登録の場合は自動的に新規登録する。
+        `profile_exists` が false の場合はプロフィール設定画面へ遷移する。
       operationId: loginWithGoogle
       requestBody:
         required: true
@@ -177,6 +185,189 @@ paths:
           description: ログアウト成功
         '401':
           $ref: '#/components/responses/Unauthorized'
+
+  /images:
+    post:
+      tags: [images]
+      summary: 画像をアップロードする
+      description: |
+        R2 に画像をアップロードし、登録された画像レコードを返す。
+        プロフィールアイコン設定前にこのエンドポイントで画像を登録し、
+        返却された `id` を `POST /profiles/me` の `icon_image_id` に指定する。
+      operationId: uploadImage
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, directory]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: アップロードする画像ファイル
+                directory:
+                  type: string
+                  description: R2 上の保存先ディレクトリ
+                  example: profiles/icons
+      responses:
+        '201':
+          description: アップロード成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ImageResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /things:
+    get:
+      tags: [things]
+      summary: 事柄一覧を検索する
+      description: |
+        プロフィール設定時の入力補助として事柄の候補を返す。
+        `q` を指定するとキーワード前方一致で絞り込む。
+      operationId: listThings
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+          description: 検索キーワード（前方一致）
+          example: プログラミ
+      responses:
+        '200':
+          description: 事柄一覧
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThingsResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    post:
+      tags: [things]
+      summary: 新しい事柄を作成する
+      description: 候補にない事柄をユーザーが自由入力で追加する。
+      operationId: createThing
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ThingCreateRequest'
+      responses:
+        '201':
+          description: 作成成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ThingResponse'
+        '409':
+          description: 同名の事柄が既に存在する
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /profiles/me:
+    post:
+      tags: [profile]
+      summary: プロフィールを初回作成する
+      description: |
+        OTP認証後のプロフィール設定画面で呼び出す。
+        `doing_thing_ids` と `want_thing_ids` には事前に `/things` で取得または作成した thing の ID を渡す。
+      operationId: createMyProfile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfileCreateRequest'
+      responses:
+        '201':
+          description: プロフィール作成成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileResponse'
+        '409':
+          description: プロフィールが既に存在する
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    get:
+      tags: [profile]
+      summary: 自分のプロフィールを取得する
+      description: ホーム画面の自分の情報表示に使用する。
+      operationId: getMyProfile
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: プロフィール取得成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileResponse'
+        '404':
+          description: プロフィールが未作成
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    patch:
+      tags: [profile]
+      summary: 自分のプロフィールを更新する
+      description: ホーム画面などからプロフィールを編集する。指定したフィールドのみ更新する。
+      operationId: updateMyProfile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfileUpdateRequest'
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProfileResponse'
+        '404':
+          description: プロフィールが未作成
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
 
 components:
   securitySchemes:
@@ -254,6 +445,67 @@ components:
         refresh_token:
           type: string
 
+    ThingCreateRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          maxLength: 100
+          example: プログラミング
+
+    ProfileCreateRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          maxLength: 100
+          example: 田中太郎
+        bio:
+          type: string
+          nullable: true
+          example: よろしくお願いします
+        icon_image_id:
+          type: integer
+          nullable: true
+          description: 事前に POST /images でアップロードした画像の ID
+        doing_thing_ids:
+          type: array
+          items:
+            type: integer
+          description: やっていることの thing ID リスト
+          example: [1, 2]
+        want_thing_ids:
+          type: array
+          items:
+            type: integer
+          description: やってみたいことの thing ID リスト
+          example: [3, 4]
+
+    ProfileUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          maxLength: 100
+        bio:
+          type: string
+          nullable: true
+        icon_image_id:
+          type: integer
+          nullable: true
+        doing_thing_ids:
+          type: array
+          items:
+            type: integer
+          description: やっていることを上書き更新する thing ID リスト
+        want_thing_ids:
+          type: array
+          items:
+            type: integer
+          description: やってみたいことを上書き更新する thing ID リスト
+
     OtpSentResponse:
       type: object
       properties:
@@ -280,6 +532,88 @@ components:
           type: integer
           description: アクセストークンの有効期限（秒）
           example: 3600
+        profile_exists:
+          type: boolean
+          description: |
+            プロフィールが設定済みかどうか。
+            false の場合はプロフィール設定画面へ遷移する。
+
+    ImageResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        directory:
+          type: string
+          example: profiles/icons
+        url:
+          type: string
+          example: https://pub-xxx.r2.dev/profiles/icons/abc123.jpg
+        created_at:
+          type: string
+          format: date-time
+
+    ThingResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: プログラミング
+        aliases:
+          type: array
+          items:
+            type: string
+          description: 正規化エイリアス一覧
+          example: [programming, コーディング]
+        created_at:
+          type: string
+          format: date-time
+
+    ThingsResponse:
+      type: object
+      properties:
+        things:
+          type: array
+          items:
+            $ref: '#/components/schemas/ThingResponse'
+
+    ProfileResponse:
+      type: object
+      properties:
+        user_id:
+          type: integer
+          example: 42
+        name:
+          type: string
+          example: 田中太郎
+        bio:
+          type: string
+          nullable: true
+          example: よろしくお願いします
+        icon_image:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/ImageResponse'
+        doings:
+          type: array
+          items:
+            $ref: '#/components/schemas/ThingResponse'
+          description: やっていること
+        wants:
+          type: array
+          items:
+            $ref: '#/components/schemas/ThingResponse'
+          description: やってみたいこと
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
 
     ErrorResponse:
       type: object

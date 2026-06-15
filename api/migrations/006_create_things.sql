@@ -1,0 +1,7 @@
+CREATE TABLE IF NOT EXISTS things (
+    id         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    name       VARCHAR(100)    NOT NULL,
+    created_at DATETIME(3)     NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_things_name (name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
