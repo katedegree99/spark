@@ -8,9 +8,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"mime/multipart"
 	"net/http"
+	"time"
 
 	"github.com/labstack/echo/v4"
+	"github.com/oapi-codegen/runtime"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
@@ -38,9 +41,13 @@ type AuthTokensResponse struct {
 	AccessToken *string `json:"access_token,omitempty"`
 
 	// ExpiresIn アクセストークンの有効期限（秒）
-	ExpiresIn    *int                         `json:"expires_in,omitempty"`
-	RefreshToken *string                      `json:"refresh_token,omitempty"`
-	TokenType    *AuthTokensResponseTokenType `json:"token_type,omitempty"`
+	ExpiresIn *int `json:"expires_in,omitempty"`
+
+	// ProfileExists プロフィールが設定済みかどうか。
+	// false の場合はプロフィール設定画面へ遷移する。
+	ProfileExists *bool                        `json:"profile_exists,omitempty"`
+	RefreshToken  *string                      `json:"refresh_token,omitempty"`
+	TokenType     *AuthTokensResponseTokenType `json:"token_type,omitempty"`
 }
 
 // AuthTokensResponseTokenType defines model for AuthTokensResponse.TokenType.
@@ -56,6 +63,14 @@ type ErrorResponse struct {
 type GoogleLoginRequest struct {
 	// IdToken Googleから取得したIDトークン
 	IdToken string `json:"id_token"`
+}
+
+// ImageResponse defines model for ImageResponse.
+type ImageResponse struct {
+	CreatedAt *time.Time `json:"created_at,omitempty"`
+	Directory *string    `json:"directory,omitempty"`
+	Id        *int       `json:"id,omitempty"`
+	Url       *string    `json:"url,omitempty"`
 }
 
 // LoginRequest defines model for LoginRequest.
@@ -78,6 +93,50 @@ type OtpVerifyRequest struct {
 	Email openapi_types.Email `json:"email"`
 }
 
+// ProfileCreateRequest defines model for ProfileCreateRequest.
+type ProfileCreateRequest struct {
+	Bio *string `json:"bio,omitempty"`
+
+	// DoingThingIds やっていることの thing ID リスト
+	DoingThingIds *[]int `json:"doing_thing_ids,omitempty"`
+
+	// IconImageId 事前に POST /images でアップロードした画像の ID
+	IconImageId *int   `json:"icon_image_id,omitempty"`
+	Name        string `json:"name"`
+
+	// WantThingIds やってみたいことの thing ID リスト
+	WantThingIds *[]int `json:"want_thing_ids,omitempty"`
+}
+
+// ProfileResponse defines model for ProfileResponse.
+type ProfileResponse struct {
+	Bio       *string    `json:"bio,omitempty"`
+	CreatedAt *time.Time `json:"created_at,omitempty"`
+
+	// Doings やっていること
+	Doings    *[]ThingResponse `json:"doings,omitempty"`
+	IconImage *ImageResponse   `json:"icon_image,omitempty"`
+	Name      *string          `json:"name,omitempty"`
+	UpdatedAt *time.Time       `json:"updated_at,omitempty"`
+	UserId    *int             `json:"user_id,omitempty"`
+
+	// Wants やってみたいこと
+	Wants *[]ThingResponse `json:"wants,omitempty"`
+}
+
+// ProfileUpdateRequest defines model for ProfileUpdateRequest.
+type ProfileUpdateRequest struct {
+	Bio *string `json:"bio,omitempty"`
+
+	// DoingThingIds やっていることを上書き更新する thing ID リスト
+	DoingThingIds *[]int  `json:"doing_thing_ids,omitempty"`
+	IconImageId   *int    `json:"icon_image_id,omitempty"`
+	Name          *string `json:"name,omitempty"`
+
+	// WantThingIds やってみたいことを上書き更新する thing ID リスト
+	WantThingIds *[]int `json:"want_thing_ids,omitempty"`
+}
+
 // RefreshTokenRequest defines model for RefreshTokenRequest.
 type RefreshTokenRequest struct {
 	RefreshToken string `json:"refresh_token"`
@@ -87,6 +146,25 @@ type RefreshTokenRequest struct {
 type RegisterRequest struct {
 	Email    openapi_types.Email `json:"email"`
 	Password string              `json:"password"`
+}
+
+// ThingCreateRequest defines model for ThingCreateRequest.
+type ThingCreateRequest struct {
+	Name string `json:"name"`
+}
+
+// ThingResponse defines model for ThingResponse.
+type ThingResponse struct {
+	// Aliases 正規化エイリアス一覧
+	Aliases   *[]string  `json:"aliases,omitempty"`
+	CreatedAt *time.Time `json:"created_at,omitempty"`
+	Id        *int       `json:"id,omitempty"`
+	Name      *string    `json:"name,omitempty"`
+}
+
+// ThingsResponse defines model for ThingsResponse.
+type ThingsResponse struct {
+	Things *[]ThingResponse `json:"things,omitempty"`
 }
 
 // ValidationErrorResponse defines model for ValidationErrorResponse.
@@ -108,6 +186,21 @@ type ValidationError = ValidationErrorResponse
 // bearerAuthContextKey is the context key for bearerAuth security scheme
 type bearerAuthContextKey string
 
+// UploadImageMultipartBody defines parameters for UploadImage.
+type UploadImageMultipartBody struct {
+	// Directory R2 上の保存先ディレクトリ
+	Directory string `json:"directory"`
+
+	// File アップロードする画像ファイル
+	File openapi_types.File `json:"file"`
+}
+
+// ListThingsParams defines parameters for ListThings.
+type ListThingsParams struct {
+	// Q 検索キーワード（前方一致）
+	Q *string `form:"q,omitempty" json:"q,omitempty"`
+}
+
 // LoginWithGoogleJSONRequestBody defines body for LoginWithGoogle for application/json ContentType.
 type LoginWithGoogleJSONRequestBody = GoogleLoginRequest
 
@@ -125,6 +218,18 @@ type RefreshTokenJSONRequestBody = RefreshTokenRequest
 
 // RegisterWithEmailJSONRequestBody defines body for RegisterWithEmail for application/json ContentType.
 type RegisterWithEmailJSONRequestBody = RegisterRequest
+
+// UploadImageMultipartRequestBody defines body for UploadImage for multipart/form-data ContentType.
+type UploadImageMultipartRequestBody UploadImageMultipartBody
+
+// UpdateMyProfileJSONRequestBody defines body for UpdateMyProfile for application/json ContentType.
+type UpdateMyProfileJSONRequestBody = ProfileUpdateRequest
+
+// CreateMyProfileJSONRequestBody defines body for CreateMyProfile for application/json ContentType.
+type CreateMyProfileJSONRequestBody = ProfileCreateRequest
+
+// CreateThingJSONRequestBody defines body for CreateThing for application/json ContentType.
+type CreateThingJSONRequestBody = ThingCreateRequest
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
@@ -146,6 +251,24 @@ type ServerInterface interface {
 	// メールアドレスで新規登録
 	// (POST /auth/register)
 	RegisterWithEmail(ctx echo.Context) error
+	// 画像をアップロードする
+	// (POST /images)
+	UploadImage(ctx echo.Context) error
+	// 自分のプロフィールを取得する
+	// (GET /profiles/me)
+	GetMyProfile(ctx echo.Context) error
+	// 自分のプロフィールを更新する
+	// (PATCH /profiles/me)
+	UpdateMyProfile(ctx echo.Context) error
+	// プロフィールを初回作成する
+	// (POST /profiles/me)
+	CreateMyProfile(ctx echo.Context) error
+	// 事柄一覧を検索する
+	// (GET /things)
+	ListThings(ctx echo.Context, params ListThingsParams) error
+	// 新しい事柄を作成する
+	// (POST /things)
+	CreateThing(ctx echo.Context) error
 }
 
 // ServerInterfaceWrapper converts echo contexts to parameters.
@@ -209,6 +332,81 @@ func (w *ServerInterfaceWrapper) RegisterWithEmail(ctx echo.Context) error {
 	return err
 }
 
+// UploadImage converts echo context to params.
+func (w *ServerInterfaceWrapper) UploadImage(ctx echo.Context) error {
+	var err error
+
+	ctx.Set(string(BearerAuthScopes), []string{})
+
+	// Invoke the callback with all the unmarshaled arguments
+	err = w.Handler.UploadImage(ctx)
+	return err
+}
+
+// GetMyProfile converts echo context to params.
+func (w *ServerInterfaceWrapper) GetMyProfile(ctx echo.Context) error {
+	var err error
+
+	ctx.Set(string(BearerAuthScopes), []string{})
+
+	// Invoke the callback with all the unmarshaled arguments
+	err = w.Handler.GetMyProfile(ctx)
+	return err
+}
+
+// UpdateMyProfile converts echo context to params.
+func (w *ServerInterfaceWrapper) UpdateMyProfile(ctx echo.Context) error {
+	var err error
+
+	ctx.Set(string(BearerAuthScopes), []string{})
+
+	// Invoke the callback with all the unmarshaled arguments
+	err = w.Handler.UpdateMyProfile(ctx)
+	return err
+}
+
+// CreateMyProfile converts echo context to params.
+func (w *ServerInterfaceWrapper) CreateMyProfile(ctx echo.Context) error {
+	var err error
+
+	ctx.Set(string(BearerAuthScopes), []string{})
+
+	// Invoke the callback with all the unmarshaled arguments
+	err = w.Handler.CreateMyProfile(ctx)
+	return err
+}
+
+// ListThings converts echo context to params.
+func (w *ServerInterfaceWrapper) ListThings(ctx echo.Context) error {
+	var err error
+
+	ctx.Set(string(BearerAuthScopes), []string{})
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListThingsParams
+	// ------------- Optional query parameter "q" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "q", ctx.QueryParams(), &params.Q, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter q: %s", err))
+	}
+
+	// Invoke the callback with all the unmarshaled arguments
+	err = w.Handler.ListThings(ctx, params)
+	return err
+}
+
+// CreateThing converts echo context to params.
+func (w *ServerInterfaceWrapper) CreateThing(ctx echo.Context) error {
+	var err error
+
+	ctx.Set(string(BearerAuthScopes), []string{})
+
+	// Invoke the callback with all the unmarshaled arguments
+	err = w.Handler.CreateThing(ctx)
+	return err
+}
+
 // This is a simple interface which specifies echo.Route addition functions which
 // are present on both echo.Echo and echo.Group, since we want to allow using
 // either of them for path registration
@@ -262,6 +460,12 @@ func RegisterHandlersWithOptions(router EchoRouter, si ServerInterface, options 
 	router.POST(options.BaseURL+"/auth/otp/verify", wrapper.VerifyOtp, options.OperationMiddlewares["verifyOtp"]...)
 	router.POST(options.BaseURL+"/auth/refresh", wrapper.RefreshToken, options.OperationMiddlewares["refreshToken"]...)
 	router.POST(options.BaseURL+"/auth/register", wrapper.RegisterWithEmail, options.OperationMiddlewares["registerWithEmail"]...)
+	router.POST(options.BaseURL+"/images", wrapper.UploadImage, options.OperationMiddlewares["uploadImage"]...)
+	router.GET(options.BaseURL+"/profiles/me", wrapper.GetMyProfile, options.OperationMiddlewares["getMyProfile"]...)
+	router.PATCH(options.BaseURL+"/profiles/me", wrapper.UpdateMyProfile, options.OperationMiddlewares["updateMyProfile"]...)
+	router.POST(options.BaseURL+"/profiles/me", wrapper.CreateMyProfile, options.OperationMiddlewares["createMyProfile"]...)
+	router.GET(options.BaseURL+"/things", wrapper.ListThings, options.OperationMiddlewares["listThings"]...)
+	router.POST(options.BaseURL+"/things", wrapper.CreateThing, options.OperationMiddlewares["createThing"]...)
 
 }
 
@@ -535,6 +739,333 @@ func (response RegisterWithEmail422JSONResponse) VisitRegisterWithEmailResponse(
 	return err
 }
 
+type UploadImageRequestObject struct {
+	Body *multipart.Reader
+}
+
+type UploadImageResponseObject interface {
+	VisitUploadImageResponse(w http.ResponseWriter) error
+}
+
+type UploadImage201JSONResponse ImageResponse
+
+func (response UploadImage201JSONResponse) VisitUploadImageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UploadImage401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UploadImage401JSONResponse) VisitUploadImageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UploadImage422JSONResponse struct{ ValidationErrorJSONResponse }
+
+func (response UploadImage422JSONResponse) VisitUploadImageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMyProfileRequestObject struct {
+}
+
+type GetMyProfileResponseObject interface {
+	VisitGetMyProfileResponse(w http.ResponseWriter) error
+}
+
+type GetMyProfile200JSONResponse ProfileResponse
+
+func (response GetMyProfile200JSONResponse) VisitGetMyProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMyProfile401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetMyProfile401JSONResponse) VisitGetMyProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetMyProfile404JSONResponse ErrorResponse
+
+func (response GetMyProfile404JSONResponse) VisitGetMyProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateMyProfileRequestObject struct {
+	Body *UpdateMyProfileJSONRequestBody
+}
+
+type UpdateMyProfileResponseObject interface {
+	VisitUpdateMyProfileResponse(w http.ResponseWriter) error
+}
+
+type UpdateMyProfile200JSONResponse ProfileResponse
+
+func (response UpdateMyProfile200JSONResponse) VisitUpdateMyProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateMyProfile401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response UpdateMyProfile401JSONResponse) VisitUpdateMyProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateMyProfile404JSONResponse ErrorResponse
+
+func (response UpdateMyProfile404JSONResponse) VisitUpdateMyProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type UpdateMyProfile422JSONResponse struct{ ValidationErrorJSONResponse }
+
+func (response UpdateMyProfile422JSONResponse) VisitUpdateMyProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateMyProfileRequestObject struct {
+	Body *CreateMyProfileJSONRequestBody
+}
+
+type CreateMyProfileResponseObject interface {
+	VisitCreateMyProfileResponse(w http.ResponseWriter) error
+}
+
+type CreateMyProfile201JSONResponse ProfileResponse
+
+func (response CreateMyProfile201JSONResponse) VisitCreateMyProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateMyProfile401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response CreateMyProfile401JSONResponse) VisitCreateMyProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateMyProfile409JSONResponse ErrorResponse
+
+func (response CreateMyProfile409JSONResponse) VisitCreateMyProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateMyProfile422JSONResponse struct{ ValidationErrorJSONResponse }
+
+func (response CreateMyProfile422JSONResponse) VisitCreateMyProfileResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListThingsRequestObject struct {
+	Params ListThingsParams
+}
+
+type ListThingsResponseObject interface {
+	VisitListThingsResponse(w http.ResponseWriter) error
+}
+
+type ListThings200JSONResponse ThingsResponse
+
+func (response ListThings200JSONResponse) VisitListThingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListThings401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListThings401JSONResponse) VisitListThingsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateThingRequestObject struct {
+	Body *CreateThingJSONRequestBody
+}
+
+type CreateThingResponseObject interface {
+	VisitCreateThingResponse(w http.ResponseWriter) error
+}
+
+type CreateThing201JSONResponse ThingResponse
+
+func (response CreateThing201JSONResponse) VisitCreateThingResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateThing401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response CreateThing401JSONResponse) VisitCreateThingResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateThing409JSONResponse ErrorResponse
+
+func (response CreateThing409JSONResponse) VisitCreateThingResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CreateThing422JSONResponse struct{ ValidationErrorJSONResponse }
+
+func (response CreateThing422JSONResponse) VisitCreateThingResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 	// GoogleでログインまたはID連携
@@ -555,6 +1086,24 @@ type StrictServerInterface interface {
 	// メールアドレスで新規登録
 	// (POST /auth/register)
 	RegisterWithEmail(ctx context.Context, request RegisterWithEmailRequestObject) (RegisterWithEmailResponseObject, error)
+	// 画像をアップロードする
+	// (POST /images)
+	UploadImage(ctx context.Context, request UploadImageRequestObject) (UploadImageResponseObject, error)
+	// 自分のプロフィールを取得する
+	// (GET /profiles/me)
+	GetMyProfile(ctx context.Context, request GetMyProfileRequestObject) (GetMyProfileResponseObject, error)
+	// 自分のプロフィールを更新する
+	// (PATCH /profiles/me)
+	UpdateMyProfile(ctx context.Context, request UpdateMyProfileRequestObject) (UpdateMyProfileResponseObject, error)
+	// プロフィールを初回作成する
+	// (POST /profiles/me)
+	CreateMyProfile(ctx context.Context, request CreateMyProfileRequestObject) (CreateMyProfileResponseObject, error)
+	// 事柄一覧を検索する
+	// (GET /things)
+	ListThings(ctx context.Context, request ListThingsRequestObject) (ListThingsResponseObject, error)
+	// 新しい事柄を作成する
+	// (POST /things)
+	CreateThing(ctx context.Context, request CreateThingRequestObject) (CreateThingResponseObject, error)
 }
 
 type StrictHandlerFunc func(ctx echo.Context, request any) (any, error)
@@ -737,6 +1286,170 @@ func (sh *strictHandler) RegisterWithEmail(ctx echo.Context) error {
 		return err
 	} else if validResponse, ok := response.(RegisterWithEmailResponseObject); ok {
 		return validResponse.VisitRegisterWithEmailResponse(ctx.Response())
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// UploadImage operation middleware
+func (sh *strictHandler) UploadImage(ctx echo.Context) error {
+	var request UploadImageRequestObject
+
+	if reader, err := ctx.Request().MultipartReader(); err != nil {
+		return err
+	} else {
+		request.Body = reader
+	}
+
+	handler := func(ctx echo.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.UploadImage(ctx.Request().Context(), request.(UploadImageRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UploadImage")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return err
+	} else if validResponse, ok := response.(UploadImageResponseObject); ok {
+		return validResponse.VisitUploadImageResponse(ctx.Response())
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// GetMyProfile operation middleware
+func (sh *strictHandler) GetMyProfile(ctx echo.Context) error {
+	var request GetMyProfileRequestObject
+
+	handler := func(ctx echo.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GetMyProfile(ctx.Request().Context(), request.(GetMyProfileRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetMyProfile")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return err
+	} else if validResponse, ok := response.(GetMyProfileResponseObject); ok {
+		return validResponse.VisitGetMyProfileResponse(ctx.Response())
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// UpdateMyProfile operation middleware
+func (sh *strictHandler) UpdateMyProfile(ctx echo.Context) error {
+	var request UpdateMyProfileRequestObject
+
+	var body UpdateMyProfileJSONRequestBody
+	if err := ctx.Bind(&body); err != nil {
+		return err
+	}
+	request.Body = &body
+
+	handler := func(ctx echo.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.UpdateMyProfile(ctx.Request().Context(), request.(UpdateMyProfileRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "UpdateMyProfile")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return err
+	} else if validResponse, ok := response.(UpdateMyProfileResponseObject); ok {
+		return validResponse.VisitUpdateMyProfileResponse(ctx.Response())
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// CreateMyProfile operation middleware
+func (sh *strictHandler) CreateMyProfile(ctx echo.Context) error {
+	var request CreateMyProfileRequestObject
+
+	var body CreateMyProfileJSONRequestBody
+	if err := ctx.Bind(&body); err != nil {
+		return err
+	}
+	request.Body = &body
+
+	handler := func(ctx echo.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateMyProfile(ctx.Request().Context(), request.(CreateMyProfileRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateMyProfile")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return err
+	} else if validResponse, ok := response.(CreateMyProfileResponseObject); ok {
+		return validResponse.VisitCreateMyProfileResponse(ctx.Response())
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// ListThings operation middleware
+func (sh *strictHandler) ListThings(ctx echo.Context, params ListThingsParams) error {
+	var request ListThingsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx echo.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ListThings(ctx.Request().Context(), request.(ListThingsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListThings")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return err
+	} else if validResponse, ok := response.(ListThingsResponseObject); ok {
+		return validResponse.VisitListThingsResponse(ctx.Response())
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// CreateThing operation middleware
+func (sh *strictHandler) CreateThing(ctx echo.Context) error {
+	var request CreateThingRequestObject
+
+	var body CreateThingJSONRequestBody
+	if err := ctx.Bind(&body); err != nil {
+		return err
+	}
+	request.Body = &body
+
+	handler := func(ctx echo.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.CreateThing(ctx.Request().Context(), request.(CreateThingRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CreateThing")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return err
+	} else if validResponse, ok := response.(CreateThingResponseObject); ok {
+		return validResponse.VisitCreateThingResponse(ctx.Response())
 	} else if response != nil {
 		return fmt.Errorf("unexpected response type: %T", response)
 	}

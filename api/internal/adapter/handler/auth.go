@@ -136,4 +136,3 @@ func (h *AuthHandler) Logout(ctx context.Context, req generated.LogoutRequestObj
 	return generated.Logout204Response{}, nil
 }
 
-var _ generated.StrictServerInterface = (*AuthHandler)(nil)

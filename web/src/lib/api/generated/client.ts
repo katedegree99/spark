@@ -5,8 +5,10 @@
  * Spark API
  * OpenAPI spec version: 0.1.0
  */
+import useSwr from 'swr';
 import type {
-  Key
+  Key,
+  SWRConfiguration
 } from 'swr';
 
 import useSWRMutation from 'swr/mutation';
@@ -18,12 +20,21 @@ import type {
   AuthTokensResponse,
   ErrorResponse,
   GoogleLoginRequest,
+  ImageResponse,
+  ListThingsParams,
   LoginRequest,
   OtpSentResponse,
   OtpVerifyRequest,
+  ProfileCreateRequest,
+  ProfileResponse,
+  ProfileUpdateRequest,
   RefreshTokenRequest,
   RegisterRequest,
+  ThingCreateRequest,
+  ThingResponse,
+  ThingsResponse,
   UnauthorizedResponse,
+  UploadImageBody,
   ValidationErrorResponse
 } from './model';
 
@@ -236,6 +247,7 @@ export const getVerifyOtpUrl = () => {
 /**
  * メールで送信された6桁のOTPを検証する。
  * 成功するとアクセストークンとリフレッシュトークンを返す。
+ * `profile_exists` が false の場合はプロフィール設定画面へ遷移する。
  * @summary OTPを検証してトークンを発行
  */
 export const verifyOtp = async (otpVerifyRequest: OtpVerifyRequest, options?: RequestInit): Promise<verifyOtpResponse> => {
@@ -323,6 +335,7 @@ export const getLoginWithGoogleUrl = () => {
 /**
  * フロントエンドで取得したGoogleのIDトークンを送信する。
  * 未登録の場合は自動的に新規登録する。
+ * `profile_exists` が false の場合はプロフィール設定画面へ遷移する。
  * @summary GoogleでログインまたはID連携
  */
 export const loginWithGoogle = async (googleLoginRequest: GoogleLoginRequest, options?: RequestInit): Promise<loginWithGoogleResponse> => {
@@ -527,6 +540,536 @@ export const useLogout = <TError = Promise<UnauthorizedResponse>>(
 
   const swrKey = swrOptions?.swrKey ?? getLogoutMutationKey();
   const swrFn = getLogoutMutationFetcher(fetchOptions);
+
+  const query = useSWRMutation(swrKey, swrFn, swrOptions)
+
+  return {
+    swrKey,
+    ...query
+  }
+}
+
+export type uploadImageResponse201 = {
+  data: ImageResponse
+  status: 201
+}
+
+export type uploadImageResponse401 = {
+  data: UnauthorizedResponse
+  status: 401
+}
+
+export type uploadImageResponse422 = {
+  data: ValidationErrorResponse
+  status: 422
+}
+
+export type uploadImageResponseSuccess = (uploadImageResponse201) & {
+  headers: Headers;
+};
+export type uploadImageResponseError = (uploadImageResponse401 | uploadImageResponse422) & {
+  headers: Headers;
+};
+
+export type uploadImageResponse = (uploadImageResponseSuccess | uploadImageResponseError)
+
+export const getUploadImageUrl = () => {
+
+
+
+
+  return `/images`
+}
+
+/**
+ * R2 に画像をアップロードし、登録された画像レコードを返す。
+ * プロフィールアイコン設定前にこのエンドポイントで画像を登録し、
+ * 返却された `id` を `POST /profiles/me` の `icon_image_id` に指定する。
+ * @summary 画像をアップロードする
+ */
+export const uploadImage = async (uploadImageBody: UploadImageBody, options?: RequestInit): Promise<uploadImageResponse> => {
+    const formData = new FormData();
+formData.append(`file`, uploadImageBody.file);
+formData.append(`directory`, uploadImageBody.directory);
+
+  const res = await fetch(getUploadImageUrl(),
+  {
+    ...options,
+    method: 'POST'
+    ,
+    body: formData
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: uploadImageResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as uploadImageResponse
+}
+
+
+
+
+export const getUploadImageMutationFetcher = ( options?: RequestInit) => {
+  return (_: Key, { arg }: { arg: UploadImageBody }) => {
+    return uploadImage(arg, options);
+  }
+}
+export const getUploadImageMutationKey = () => [`/images`] as const;
+
+export type UploadImageMutationResult = NonNullable<Awaited<ReturnType<typeof uploadImage>>>
+
+/**
+ * @summary 画像をアップロードする
+ */
+export const useUploadImage = <TError = Promise<UnauthorizedResponse | ValidationErrorResponse>>(
+   options?: { swr?:SWRMutationConfiguration<Awaited<ReturnType<typeof uploadImage>>, TError, Key, UploadImageBody, Awaited<ReturnType<typeof uploadImage>>> & { swrKey?: string }, fetch?: RequestInit}
+) => {
+
+  const {swr: swrOptions, fetch: fetchOptions} = options ?? {}
+
+  const swrKey = swrOptions?.swrKey ?? getUploadImageMutationKey();
+  const swrFn = getUploadImageMutationFetcher(fetchOptions);
+
+  const query = useSWRMutation(swrKey, swrFn, swrOptions)
+
+  return {
+    swrKey,
+    ...query
+  }
+}
+
+export type listThingsResponse200 = {
+  data: ThingsResponse
+  status: 200
+}
+
+export type listThingsResponse401 = {
+  data: UnauthorizedResponse
+  status: 401
+}
+
+export type listThingsResponseSuccess = (listThingsResponse200) & {
+  headers: Headers;
+};
+export type listThingsResponseError = (listThingsResponse401) & {
+  headers: Headers;
+};
+
+export type listThingsResponse = (listThingsResponseSuccess | listThingsResponseError)
+
+export const getListThingsUrl = (params?: ListThingsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/things?${stringifiedParams}` : `/things`
+}
+
+/**
+ * プロフィール設定時の入力補助として事柄の候補を返す。
+ * `q` を指定するとキーワード前方一致で絞り込む。
+ * @summary 事柄一覧を検索する
+ */
+export const listThings = async (params?: ListThingsParams, options?: RequestInit): Promise<listThingsResponse> => {
+
+  const res = await fetch(getListThingsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: listThingsResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as listThingsResponse
+}
+
+
+
+
+export const getListThingsKey = (params?: ListThingsParams,) => [`/things`, ...(params ? [params]: [])] as const;
+
+export type ListThingsQueryResult = NonNullable<Awaited<ReturnType<typeof listThings>>>
+
+/**
+ * @summary 事柄一覧を検索する
+ */
+export const useListThings = <TError = Promise<UnauthorizedResponse>>(
+  params?: ListThingsParams, options?: { swr?:SWRConfiguration<Awaited<ReturnType<typeof listThings>>, TError> & { swrKey?: Key, enabled?: boolean }, fetch?: RequestInit }
+) => {
+  const {swr: swrOptions, fetch: fetchOptions} = options ?? {}
+
+  const isEnabled = swrOptions?.enabled !== false
+  const swrKey = swrOptions?.swrKey ?? (() => isEnabled ? getListThingsKey(params) : null);
+  const swrFn = () => listThings(params, fetchOptions)
+
+  const query = useSwr<Awaited<ReturnType<typeof swrFn>>, TError>(swrKey, swrFn, swrOptions)
+
+  return {
+    swrKey,
+    ...query
+  }
+}
+
+export type createThingResponse201 = {
+  data: ThingResponse
+  status: 201
+}
+
+export type createThingResponse401 = {
+  data: UnauthorizedResponse
+  status: 401
+}
+
+export type createThingResponse409 = {
+  data: ErrorResponse
+  status: 409
+}
+
+export type createThingResponse422 = {
+  data: ValidationErrorResponse
+  status: 422
+}
+
+export type createThingResponseSuccess = (createThingResponse201) & {
+  headers: Headers;
+};
+export type createThingResponseError = (createThingResponse401 | createThingResponse409 | createThingResponse422) & {
+  headers: Headers;
+};
+
+export type createThingResponse = (createThingResponseSuccess | createThingResponseError)
+
+export const getCreateThingUrl = () => {
+
+
+
+
+  return `/things`
+}
+
+/**
+ * 候補にない事柄をユーザーが自由入力で追加する。
+ * @summary 新しい事柄を作成する
+ */
+export const createThing = async (thingCreateRequest: ThingCreateRequest, options?: RequestInit): Promise<createThingResponse> => {
+
+  const res = await fetch(getCreateThingUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(thingCreateRequest)
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: createThingResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as createThingResponse
+}
+
+
+
+
+export const getCreateThingMutationFetcher = ( options?: RequestInit) => {
+  return (_: Key, { arg }: { arg: ThingCreateRequest }) => {
+    return createThing(arg, options);
+  }
+}
+export const getCreateThingMutationKey = () => [`/things`] as const;
+
+export type CreateThingMutationResult = NonNullable<Awaited<ReturnType<typeof createThing>>>
+
+/**
+ * @summary 新しい事柄を作成する
+ */
+export const useCreateThing = <TError = Promise<UnauthorizedResponse | ErrorResponse | ValidationErrorResponse>>(
+   options?: { swr?:SWRMutationConfiguration<Awaited<ReturnType<typeof createThing>>, TError, Key, ThingCreateRequest, Awaited<ReturnType<typeof createThing>>> & { swrKey?: string }, fetch?: RequestInit}
+) => {
+
+  const {swr: swrOptions, fetch: fetchOptions} = options ?? {}
+
+  const swrKey = swrOptions?.swrKey ?? getCreateThingMutationKey();
+  const swrFn = getCreateThingMutationFetcher(fetchOptions);
+
+  const query = useSWRMutation(swrKey, swrFn, swrOptions)
+
+  return {
+    swrKey,
+    ...query
+  }
+}
+
+export type createMyProfileResponse201 = {
+  data: ProfileResponse
+  status: 201
+}
+
+export type createMyProfileResponse401 = {
+  data: UnauthorizedResponse
+  status: 401
+}
+
+export type createMyProfileResponse409 = {
+  data: ErrorResponse
+  status: 409
+}
+
+export type createMyProfileResponse422 = {
+  data: ValidationErrorResponse
+  status: 422
+}
+
+export type createMyProfileResponseSuccess = (createMyProfileResponse201) & {
+  headers: Headers;
+};
+export type createMyProfileResponseError = (createMyProfileResponse401 | createMyProfileResponse409 | createMyProfileResponse422) & {
+  headers: Headers;
+};
+
+export type createMyProfileResponse = (createMyProfileResponseSuccess | createMyProfileResponseError)
+
+export const getCreateMyProfileUrl = () => {
+
+
+
+
+  return `/profiles/me`
+}
+
+/**
+ * OTP認証後のプロフィール設定画面で呼び出す。
+ * `doing_thing_ids` と `want_thing_ids` には事前に `/things` で取得または作成した thing の ID を渡す。
+ * @summary プロフィールを初回作成する
+ */
+export const createMyProfile = async (profileCreateRequest: ProfileCreateRequest, options?: RequestInit): Promise<createMyProfileResponse> => {
+
+  const res = await fetch(getCreateMyProfileUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(profileCreateRequest)
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: createMyProfileResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as createMyProfileResponse
+}
+
+
+
+
+export const getCreateMyProfileMutationFetcher = ( options?: RequestInit) => {
+  return (_: Key, { arg }: { arg: ProfileCreateRequest }) => {
+    return createMyProfile(arg, options);
+  }
+}
+export const getCreateMyProfileMutationKey = () => [`/profiles/me`] as const;
+
+export type CreateMyProfileMutationResult = NonNullable<Awaited<ReturnType<typeof createMyProfile>>>
+
+/**
+ * @summary プロフィールを初回作成する
+ */
+export const useCreateMyProfile = <TError = Promise<UnauthorizedResponse | ErrorResponse | ValidationErrorResponse>>(
+   options?: { swr?:SWRMutationConfiguration<Awaited<ReturnType<typeof createMyProfile>>, TError, Key, ProfileCreateRequest, Awaited<ReturnType<typeof createMyProfile>>> & { swrKey?: string }, fetch?: RequestInit}
+) => {
+
+  const {swr: swrOptions, fetch: fetchOptions} = options ?? {}
+
+  const swrKey = swrOptions?.swrKey ?? getCreateMyProfileMutationKey();
+  const swrFn = getCreateMyProfileMutationFetcher(fetchOptions);
+
+  const query = useSWRMutation(swrKey, swrFn, swrOptions)
+
+  return {
+    swrKey,
+    ...query
+  }
+}
+
+export type getMyProfileResponse200 = {
+  data: ProfileResponse
+  status: 200
+}
+
+export type getMyProfileResponse401 = {
+  data: UnauthorizedResponse
+  status: 401
+}
+
+export type getMyProfileResponse404 = {
+  data: ErrorResponse
+  status: 404
+}
+
+export type getMyProfileResponseSuccess = (getMyProfileResponse200) & {
+  headers: Headers;
+};
+export type getMyProfileResponseError = (getMyProfileResponse401 | getMyProfileResponse404) & {
+  headers: Headers;
+};
+
+export type getMyProfileResponse = (getMyProfileResponseSuccess | getMyProfileResponseError)
+
+export const getGetMyProfileUrl = () => {
+
+
+
+
+  return `/profiles/me`
+}
+
+/**
+ * ホーム画面の自分の情報表示に使用する。
+ * @summary 自分のプロフィールを取得する
+ */
+export const getMyProfile = async ( options?: RequestInit): Promise<getMyProfileResponse> => {
+
+  const res = await fetch(getGetMyProfileUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: getMyProfileResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as getMyProfileResponse
+}
+
+
+
+
+export const getGetMyProfileKey = () => [`/profiles/me`] as const;
+
+export type GetMyProfileQueryResult = NonNullable<Awaited<ReturnType<typeof getMyProfile>>>
+
+/**
+ * @summary 自分のプロフィールを取得する
+ */
+export const useGetMyProfile = <TError = Promise<UnauthorizedResponse | ErrorResponse>>(
+   options?: { swr?:SWRConfiguration<Awaited<ReturnType<typeof getMyProfile>>, TError> & { swrKey?: Key, enabled?: boolean }, fetch?: RequestInit }
+) => {
+  const {swr: swrOptions, fetch: fetchOptions} = options ?? {}
+
+  const isEnabled = swrOptions?.enabled !== false
+  const swrKey = swrOptions?.swrKey ?? (() => isEnabled ? getGetMyProfileKey() : null);
+  const swrFn = () => getMyProfile(fetchOptions)
+
+  const query = useSwr<Awaited<ReturnType<typeof swrFn>>, TError>(swrKey, swrFn, swrOptions)
+
+  return {
+    swrKey,
+    ...query
+  }
+}
+
+export type updateMyProfileResponse200 = {
+  data: ProfileResponse
+  status: 200
+}
+
+export type updateMyProfileResponse401 = {
+  data: UnauthorizedResponse
+  status: 401
+}
+
+export type updateMyProfileResponse404 = {
+  data: ErrorResponse
+  status: 404
+}
+
+export type updateMyProfileResponse422 = {
+  data: ValidationErrorResponse
+  status: 422
+}
+
+export type updateMyProfileResponseSuccess = (updateMyProfileResponse200) & {
+  headers: Headers;
+};
+export type updateMyProfileResponseError = (updateMyProfileResponse401 | updateMyProfileResponse404 | updateMyProfileResponse422) & {
+  headers: Headers;
+};
+
+export type updateMyProfileResponse = (updateMyProfileResponseSuccess | updateMyProfileResponseError)
+
+export const getUpdateMyProfileUrl = () => {
+
+
+
+
+  return `/profiles/me`
+}
+
+/**
+ * ホーム画面などからプロフィールを編集する。指定したフィールドのみ更新する。
+ * @summary 自分のプロフィールを更新する
+ */
+export const updateMyProfile = async (profileUpdateRequest: ProfileUpdateRequest, options?: RequestInit): Promise<updateMyProfileResponse> => {
+
+  const res = await fetch(getUpdateMyProfileUrl(),
+  {
+    ...options,
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(profileUpdateRequest)
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: updateMyProfileResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as updateMyProfileResponse
+}
+
+
+
+
+export const getUpdateMyProfileMutationFetcher = ( options?: RequestInit) => {
+  return (_: Key, { arg }: { arg: ProfileUpdateRequest }) => {
+    return updateMyProfile(arg, options);
+  }
+}
+export const getUpdateMyProfileMutationKey = () => [`/profiles/me`] as const;
+
+export type UpdateMyProfileMutationResult = NonNullable<Awaited<ReturnType<typeof updateMyProfile>>>
+
+/**
+ * @summary 自分のプロフィールを更新する
+ */
+export const useUpdateMyProfile = <TError = Promise<UnauthorizedResponse | ErrorResponse | ValidationErrorResponse>>(
+   options?: { swr?:SWRMutationConfiguration<Awaited<ReturnType<typeof updateMyProfile>>, TError, Key, ProfileUpdateRequest, Awaited<ReturnType<typeof updateMyProfile>>> & { swrKey?: string }, fetch?: RequestInit}
+) => {
+
+  const {swr: swrOptions, fetch: fetchOptions} = options ?? {}
+
+  const swrKey = swrOptions?.swrKey ?? getUpdateMyProfileMutationKey();
+  const swrFn = getUpdateMyProfileMutationFetcher(fetchOptions);
 
   const query = useSWRMutation(swrKey, swrFn, swrOptions)
 
