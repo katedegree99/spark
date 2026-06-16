@@ -211,8 +211,8 @@ paths:
                   description: アップロードする画像ファイル
                 directory:
                   type: string
+                  enum: [icon]
                   description: R2 上の保存先ディレクトリ
-                  example: profiles/icons
       responses:
         '201':
           description: アップロード成功

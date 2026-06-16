@@ -5,10 +5,11 @@
  * Spark API
  * OpenAPI spec version: 0.1.0
  */
+import type { UploadImageBodyDirectory } from './uploadImageBodyDirectory';
 
 export type UploadImageBody = {
   /** アップロードする画像ファイル */
   file: Blob;
   /** R2 上の保存先ディレクトリ */
-  directory: string;
+  directory: UploadImageBodyDirectory;
 };
