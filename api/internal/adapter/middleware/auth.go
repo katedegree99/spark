@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"os"
@@ -55,7 +56,12 @@ func JWTAuth() echo.MiddlewareFunc {
 				})
 			}
 
-			c.Set(string(userIDKey), uint(sub))
+			userID := uint(sub)
+			c.Set(string(userIDKey), userID)
+			// Also propagate into the standard context.Context so StrictServerInterface
+			// handlers can retrieve userID via UserIDFromGoContext.
+			newCtx := context.WithValue(c.Request().Context(), userIDKey, userID)
+			c.SetRequest(c.Request().WithContext(newCtx))
 			return next(c)
 		}
 	}
@@ -63,6 +69,18 @@ func JWTAuth() echo.MiddlewareFunc {
 
 func UserIDFromContext(c echo.Context) (uint, bool) {
 	v := c.Get(string(userIDKey))
+	if v == nil {
+		return 0, false
+	}
+	id, ok := v.(uint)
+	return id, ok
+}
+
+// UserIDFromGoContext extracts the userID from a standard context.Context.
+// This is intended for use in StrictServerInterface handlers where only
+// context.Context is available (not echo.Context).
+func UserIDFromGoContext(ctx context.Context) (uint, bool) {
+	v := ctx.Value(userIDKey)
 	if v == nil {
 		return 0, false
 	}
