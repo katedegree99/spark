@@ -25,5 +25,6 @@ export * from './thingResponse';
 export * from './thingsResponse';
 export * from './unauthorizedResponse';
 export * from './uploadImageBody';
+export * from './uploadImageBodyDirectory';
 export * from './validationErrorResponse';
 export * from './validationErrorResponseErrorsItem';

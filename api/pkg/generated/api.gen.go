@@ -36,6 +36,21 @@ func (e AuthTokensResponseTokenType) Valid() bool {
 	}
 }
 
+// Defines values for UploadImageMultipartBodyDirectory.
+const (
+	Icon UploadImageMultipartBodyDirectory = "icon"
+)
+
+// Valid indicates whether the value is a known member of the UploadImageMultipartBodyDirectory enum.
+func (e UploadImageMultipartBodyDirectory) Valid() bool {
+	switch e {
+	case Icon:
+		return true
+	default:
+		return false
+	}
+}
+
 // AuthTokensResponse defines model for AuthTokensResponse.
 type AuthTokensResponse struct {
 	AccessToken *string `json:"access_token,omitempty"`
@@ -189,11 +204,14 @@ type bearerAuthContextKey string
 // UploadImageMultipartBody defines parameters for UploadImage.
 type UploadImageMultipartBody struct {
 	// Directory R2 上の保存先ディレクトリ
-	Directory string `json:"directory"`
+	Directory UploadImageMultipartBodyDirectory `json:"directory"`
 
 	// File アップロードする画像ファイル
 	File openapi_types.File `json:"file"`
 }
+
+// UploadImageMultipartBodyDirectory defines parameters for UploadImage.
+type UploadImageMultipartBodyDirectory string
 
 // ListThingsParams defines parameters for ListThings.
 type ListThingsParams struct {
