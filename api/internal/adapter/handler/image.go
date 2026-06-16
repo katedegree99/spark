@@ -50,7 +50,16 @@ func (h *ImageHandler) UploadImage(ctx context.Context, req generated.UploadImag
 					},
 				}, nil
 			}
-			directory = string(data)
+			dir := generated.UploadImageMultipartBodyDirectory(data)
+			if !dir.Valid() {
+				return generated.UploadImage422JSONResponse{
+					ValidationErrorJSONResponse: generated.ValidationErrorJSONResponse{
+						Message: "directory must be one of: icon",
+						Code:    "VALIDATION_ERROR",
+					},
+				}, nil
+			}
+			directory = string(dir)
 		case "file":
 			originalFilename := part.FileName()
 			if originalFilename == "" {
