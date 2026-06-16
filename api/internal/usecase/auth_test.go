@@ -67,10 +67,72 @@ func (m *mockAuthRepository) DeleteRefreshToken(ctx context.Context, token strin
 	return m.deleteRefreshToken(ctx, token)
 }
 
+// mockProfileRepository implements repository.ProfileRepository for testing.
+type mockProfileRepository struct {
+	existsByUserID      func(ctx context.Context, userID uint) (bool, error)
+	create              func(ctx context.Context, p *repository.ProfileRecord) error
+	findByUserID        func(ctx context.Context, userID uint) (*repository.ProfileRecord, error)
+	update              func(ctx context.Context, p *repository.ProfileRecord) error
+	setDoings           func(ctx context.Context, userID uint, thingIDs []uint) error
+	setWants            func(ctx context.Context, userID uint, thingIDs []uint) error
+	findDoingIDsByUserID func(ctx context.Context, userID uint) ([]uint, error)
+	findWantIDsByUserID  func(ctx context.Context, userID uint) ([]uint, error)
+}
+
+func (m *mockProfileRepository) ExistsByUserID(ctx context.Context, userID uint) (bool, error) {
+	if m.existsByUserID != nil {
+		return m.existsByUserID(ctx, userID)
+	}
+	return false, nil
+}
+func (m *mockProfileRepository) Create(ctx context.Context, p *repository.ProfileRecord) error {
+	if m.create != nil {
+		return m.create(ctx, p)
+	}
+	return nil
+}
+func (m *mockProfileRepository) FindByUserID(ctx context.Context, userID uint) (*repository.ProfileRecord, error) {
+	if m.findByUserID != nil {
+		return m.findByUserID(ctx, userID)
+	}
+	return nil, nil
+}
+func (m *mockProfileRepository) Update(ctx context.Context, p *repository.ProfileRecord) error {
+	if m.update != nil {
+		return m.update(ctx, p)
+	}
+	return nil
+}
+func (m *mockProfileRepository) SetDoings(ctx context.Context, userID uint, thingIDs []uint) error {
+	if m.setDoings != nil {
+		return m.setDoings(ctx, userID, thingIDs)
+	}
+	return nil
+}
+func (m *mockProfileRepository) SetWants(ctx context.Context, userID uint, thingIDs []uint) error {
+	if m.setWants != nil {
+		return m.setWants(ctx, userID, thingIDs)
+	}
+	return nil
+}
+func (m *mockProfileRepository) FindDoingIDsByUserID(ctx context.Context, userID uint) ([]uint, error) {
+	if m.findDoingIDsByUserID != nil {
+		return m.findDoingIDsByUserID(ctx, userID)
+	}
+	return nil, nil
+}
+func (m *mockProfileRepository) FindWantIDsByUserID(ctx context.Context, userID uint) ([]uint, error) {
+	if m.findWantIDsByUserID != nil {
+		return m.findWantIDsByUserID(ctx, userID)
+	}
+	return nil, nil
+}
+
 func newTestUsecase(repo *mockAuthRepository) *authUsecase {
 	return &authUsecase{
-		authRepo:  repo,
-		emailSvc:  &mockEmailService{},
+		authRepo:    repo,
+		profileRepo: &mockProfileRepository{},
+		emailSvc:    &mockEmailService{},
 		validateGoogleToken: func(ctx context.Context, idToken, audience string) (string, error) {
 			return "", errors.New("default mock: not configured")
 		},

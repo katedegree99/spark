@@ -36,8 +36,9 @@ type AuthUsecase interface {
 }
 
 type TokenPair struct {
-	AccessToken  string
-	RefreshToken string
+	AccessToken   string
+	RefreshToken  string
+	ProfileExists bool
 }
 
 // googleTokenValidator abstracts idtoken.Validate for testability.
@@ -45,14 +46,16 @@ type googleTokenValidator func(ctx context.Context, idToken, audience string) (e
 
 type authUsecase struct {
 	authRepo            repository.AuthRepository
+	profileRepo         repository.ProfileRepository
 	emailSvc            email.EmailService
 	validateGoogleToken googleTokenValidator
 }
 
-func NewAuthUsecase(authRepo repository.AuthRepository, emailSvc email.EmailService) AuthUsecase {
+func NewAuthUsecase(authRepo repository.AuthRepository, profileRepo repository.ProfileRepository, emailSvc email.EmailService) AuthUsecase {
 	return &authUsecase{
-		authRepo: authRepo,
-		emailSvc: emailSvc,
+		authRepo:    authRepo,
+		profileRepo: profileRepo,
+		emailSvc:    emailSvc,
 		validateGoogleToken: func(ctx context.Context, idToken, audience string) (string, error) {
 			payload, err := idtoken.Validate(ctx, idToken, audience)
 			if err != nil {
@@ -193,8 +196,14 @@ func (u *authUsecase) issueTokenPair(ctx context.Context, userID uint) (*TokenPa
 		return nil, err
 	}
 
+	profileExists, err := u.profileRepo.ExistsByUserID(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+
 	return &TokenPair{
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
+		AccessToken:   accessToken,
+		RefreshToken:  refreshToken,
+		ProfileExists: profileExists,
 	}, nil
 }

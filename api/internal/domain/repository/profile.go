@@ -1,6 +1,9 @@
 package repository
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
 type ProfileRepository interface {
 	ExistsByUserID(ctx context.Context, userID uint) (bool, error)
@@ -9,6 +12,8 @@ type ProfileRepository interface {
 	Update(ctx context.Context, p *ProfileRecord) error
 	SetDoings(ctx context.Context, userID uint, thingIDs []uint) error
 	SetWants(ctx context.Context, userID uint, thingIDs []uint) error
+	FindDoingIDsByUserID(ctx context.Context, userID uint) ([]uint, error)
+	FindWantIDsByUserID(ctx context.Context, userID uint) ([]uint, error)
 }
 
 type ProfileRecord struct {
@@ -16,4 +21,6 @@ type ProfileRecord struct {
 	Name        string
 	Bio         *string
 	IconImageID *uint
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
 }
