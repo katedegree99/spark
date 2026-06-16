@@ -22,5 +22,15 @@ func NewImageUsecase(imageRepo repository.ImageRepository, storageSvc storage.St
 }
 
 func (u *imageUsecase) Upload(ctx context.Context, directory, filename string, r io.Reader) (*repository.ImageRecord, error) {
-	panic("not implemented")
+	url, err := u.storageService.Upload(ctx, directory, filename, r)
+	if err != nil {
+		return nil, err
+	}
+
+	record, err := u.imageRepo.Create(ctx, directory, url)
+	if err != nil {
+		return nil, err
+	}
+
+	return record, nil
 }
