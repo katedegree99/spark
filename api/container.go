@@ -5,6 +5,7 @@ import (
 	"github.com/katedegree/spark/api/internal/adapter/router"
 	infradb "github.com/katedegree/spark/api/internal/infrastructure/db"
 	infraemail "github.com/katedegree/spark/api/internal/infrastructure/email"
+	infrallm "github.com/katedegree/spark/api/internal/infrastructure/llm"
 	infrar2 "github.com/katedegree/spark/api/internal/infrastructure/r2"
 	infrarepo "github.com/katedegree/spark/api/internal/infrastructure/repository"
 	"github.com/katedegree/spark/api/internal/usecase"
@@ -22,6 +23,7 @@ func NewContainer() *dig.Container {
 	c.Provide(infrarepo.NewImageRepository)
 	c.Provide(infraemail.NewResendEmailService)
 	c.Provide(infrar2.NewR2Service)
+	c.Provide(infrallm.NewClaudeAliasService)
 
 	// usecase
 	c.Provide(usecase.NewAuthUsecase)

@@ -18,9 +18,12 @@ func NewThingRepository(db *gorm.DB) domainrepo.ThingRepository {
 
 func (r *thingRepository) Search(ctx context.Context, q string) ([]*domainrepo.ThingRecord, error) {
 	var things []model.Thing
-	query := r.db.WithContext(ctx).Limit(50)
+	query := r.db.WithContext(ctx).
+		Joins("JOIN thing_aliases ON thing_aliases.thing_id = things.id").
+		Distinct("things.id", "things.name", "things.created_at").
+		Limit(50)
 	if q != "" {
-		query = query.Where("name LIKE ?", q+"%")
+		query = query.Where("thing_aliases.alias LIKE ?", q+"%")
 	}
 	if err := query.Find(&things).Error; err != nil {
 		return nil, err
@@ -136,4 +139,42 @@ func (r *thingRepository) FindAliasesByThingID(ctx context.Context, thingID uint
 		result = append(result, a.Alias)
 	}
 	return result, nil
+}
+
+func (r *thingRepository) HasAlias(ctx context.Context, thingID uint) (bool, error) {
+	var count int64
+	if err := r.db.WithContext(ctx).Model(&model.ThingAlias{}).Where("thing_id = ?", thingID).Count(&count).Error; err != nil {
+		return false, err
+	}
+	return count > 0, nil
+}
+
+func (r *thingRepository) AddAlias(ctx context.Context, thingID uint, alias string) error {
+	return r.db.WithContext(ctx).Create(&model.ThingAlias{ThingID: thingID, Alias: alias}).Error
+}
+
+func (r *thingRepository) UpdateName(ctx context.Context, thingID uint, name string) error {
+	return r.db.WithContext(ctx).Model(&model.Thing{}).Where("id = ?", thingID).Update("name", name).Error
+}
+
+func (r *thingRepository) FindAllWithAliases(ctx context.Context) ([]*domainrepo.ThingRecord, error) {
+	var things []model.Thing
+	if err := r.db.WithContext(ctx).Find(&things).Error; err != nil {
+		return nil, err
+	}
+
+	records := make([]*domainrepo.ThingRecord, 0, len(things))
+	for _, t := range things {
+		aliases, err := r.FindAliasesByThingID(ctx, t.ID)
+		if err != nil {
+			return nil, err
+		}
+		records = append(records, &domainrepo.ThingRecord{
+			ID:        t.ID,
+			Name:      t.Name,
+			Aliases:   aliases,
+			CreatedAt: t.CreatedAt,
+		})
+	}
+	return records, nil
 }
