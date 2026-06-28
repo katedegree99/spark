@@ -1,6 +1,6 @@
 package handler
 
-import "github.com/katedegree/spark/api/pkg/generated"
+import "github.com/katedegree99/spark/api/pkg/generated"
 
 // Handler composes all feature handlers into a single StrictServerInterface.
 type Handler struct {

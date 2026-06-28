@@ -5,8 +5,8 @@ import (
 	"errors"
 	"log"
 
-	domainllm "github.com/katedegree/spark/api/internal/domain/llm"
-	"github.com/katedegree/spark/api/internal/domain/repository"
+	domainllm "github.com/katedegree99/spark/api/internal/domain/llm"
+	"github.com/katedegree99/spark/api/internal/domain/repository"
 )
 
 var ErrThingAlreadyExists = errors.New("thing already exists")

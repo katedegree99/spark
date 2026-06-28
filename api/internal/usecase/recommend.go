@@ -5,7 +5,7 @@ import (
 	"math/rand/v2"
 	"sort"
 
-	"github.com/katedegree/spark/api/internal/domain/repository"
+	"github.com/katedegree99/spark/api/internal/domain/repository"
 )
 
 const (

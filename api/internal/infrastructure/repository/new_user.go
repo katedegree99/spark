@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 
-	domainrepo "github.com/katedegree/spark/api/internal/domain/repository"
+	domainrepo "github.com/katedegree99/spark/api/internal/domain/repository"
 	"gorm.io/gorm"
 )
 

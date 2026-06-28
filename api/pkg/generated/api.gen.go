@@ -53,16 +53,16 @@ func (e UploadImageMultipartBodyDirectory) Valid() bool {
 
 // AuthTokensResponse defines model for AuthTokensResponse.
 type AuthTokensResponse struct {
-	AccessToken *string `json:"access_token,omitempty"`
+	AccessToken *string `json:"accessToken,omitempty"`
 
 	// ExpiresIn アクセストークンの有効期限（秒）
-	ExpiresIn *int `json:"expires_in,omitempty"`
+	ExpiresIn *int `json:"expiresIn,omitempty"`
 
 	// ProfileExists プロフィールが設定済みかどうか。
 	// false の場合はプロフィール設定画面へ遷移する。
-	ProfileExists *bool                        `json:"profile_exists,omitempty"`
-	RefreshToken  *string                      `json:"refresh_token,omitempty"`
-	TokenType     *AuthTokensResponseTokenType `json:"token_type,omitempty"`
+	ProfileExists *bool                        `json:"profileExists,omitempty"`
+	RefreshToken  *string                      `json:"refreshToken,omitempty"`
+	TokenType     *AuthTokensResponseTokenType `json:"tokenType,omitempty"`
 }
 
 // AuthTokensResponseTokenType defines model for AuthTokensResponse.TokenType.
@@ -77,12 +77,12 @@ type ErrorResponse struct {
 // GoogleLoginRequest defines model for GoogleLoginRequest.
 type GoogleLoginRequest struct {
 	// IdToken Googleから取得したIDトークン
-	IdToken string `json:"id_token"`
+	IdToken string `json:"idToken"`
 }
 
 // ImageResponse defines model for ImageResponse.
 type ImageResponse struct {
-	CreatedAt *time.Time `json:"created_at,omitempty"`
+	CreatedAt *time.Time `json:"createdAt,omitempty"`
 	Directory *string    `json:"directory,omitempty"`
 	Id        *int       `json:"id,omitempty"`
 	Url       *string    `json:"url,omitempty"`
@@ -110,7 +110,7 @@ type NewUsersResponse struct {
 // OtpSentResponse defines model for OtpSentResponse.
 type OtpSentResponse struct {
 	// ExpiresIn OTPの有効期限（秒）
-	ExpiresIn *int    `json:"expires_in,omitempty"`
+	ExpiresIn *int    `json:"expiresIn,omitempty"`
 	Message   *string `json:"message,omitempty"`
 }
 
@@ -147,27 +147,27 @@ type ProfileCreateRequest struct {
 	Bio *string `json:"bio,omitempty"`
 
 	// DoingThingIds やっていることの thing ID リスト
-	DoingThingIds *[]int `json:"doing_thing_ids,omitempty"`
+	DoingThingIds *[]int `json:"doingThingIds,omitempty"`
 
 	// IconImageId 事前に POST /images でアップロードした画像の ID
-	IconImageId *int   `json:"icon_image_id,omitempty"`
+	IconImageId *int   `json:"iconImageId,omitempty"`
 	Name        string `json:"name"`
 
 	// WantThingIds やってみたいことの thing ID リスト
-	WantThingIds *[]int `json:"want_thing_ids,omitempty"`
+	WantThingIds *[]int `json:"wantThingIds,omitempty"`
 }
 
 // ProfileResponse defines model for ProfileResponse.
 type ProfileResponse struct {
 	Bio       *string    `json:"bio,omitempty"`
-	CreatedAt *time.Time `json:"created_at,omitempty"`
+	CreatedAt *time.Time `json:"createdAt,omitempty"`
 
 	// Doings やっていること
 	Doings    *[]ThingResponse `json:"doings,omitempty"`
-	IconImage *ImageResponse   `json:"icon_image,omitempty"`
+	IconImage *ImageResponse   `json:"iconImage,omitempty"`
 	Name      *string          `json:"name,omitempty"`
-	UpdatedAt *time.Time       `json:"updated_at,omitempty"`
-	UserId    *int             `json:"user_id,omitempty"`
+	UpdatedAt *time.Time       `json:"updatedAt,omitempty"`
+	UserId    *int             `json:"userId,omitempty"`
 
 	// Wants やってみたいこと
 	Wants *[]ThingResponse `json:"wants,omitempty"`
@@ -178,12 +178,12 @@ type ProfileUpdateRequest struct {
 	Bio *string `json:"bio,omitempty"`
 
 	// DoingThingIds やっていることを上書き更新する thing ID リスト
-	DoingThingIds *[]int  `json:"doing_thing_ids,omitempty"`
-	IconImageId   *int    `json:"icon_image_id,omitempty"`
+	DoingThingIds *[]int  `json:"doingThingIds,omitempty"`
+	IconImageId   *int    `json:"iconImageId,omitempty"`
 	Name          *string `json:"name,omitempty"`
 
 	// WantThingIds やってみたいことを上書き更新する thing ID リスト
-	WantThingIds *[]int `json:"want_thing_ids,omitempty"`
+	WantThingIds *[]int `json:"wantThingIds,omitempty"`
 }
 
 // RecommendUserResponse defines model for RecommendUserResponse.
@@ -212,7 +212,7 @@ type RecommendUsersResponse struct {
 
 // RefreshTokenRequest defines model for RefreshTokenRequest.
 type RefreshTokenRequest struct {
-	RefreshToken string `json:"refresh_token"`
+	RefreshToken string `json:"refreshToken"`
 }
 
 // RegisterRequest defines model for RegisterRequest.
@@ -236,7 +236,7 @@ type ThingCreateRequest struct {
 type ThingResponse struct {
 	// Aliases 正規化エイリアス一覧（name の値を含む）
 	Aliases   *[]string  `json:"aliases,omitempty"`
-	CreatedAt *time.Time `json:"created_at,omitempty"`
+	CreatedAt *time.Time `json:"createdAt,omitempty"`
 	Id        *int       `json:"id,omitempty"`
 	Name      *string    `json:"name,omitempty"`
 }

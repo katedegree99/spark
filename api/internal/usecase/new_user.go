@@ -3,7 +3,7 @@ package usecase
 import (
 	"context"
 
-	"github.com/katedegree/spark/api/internal/domain/repository"
+	"github.com/katedegree99/spark/api/internal/domain/repository"
 )
 
 const newUserLimit = 10

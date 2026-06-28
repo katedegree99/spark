@@ -1,9 +1,9 @@
 package router
 
 import (
-	"github.com/katedegree/spark/api/internal/adapter/handler"
-	authmw "github.com/katedegree/spark/api/internal/adapter/middleware"
-	"github.com/katedegree/spark/api/pkg/generated"
+	"github.com/katedegree99/spark/api/internal/adapter/handler"
+	authmw "github.com/katedegree99/spark/api/internal/adapter/middleware"
+	"github.com/katedegree99/spark/api/pkg/generated"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
