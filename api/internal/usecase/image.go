@@ -4,8 +4,8 @@ import (
 	"context"
 	"io"
 
-	"github.com/katedegree/spark/api/internal/domain/repository"
-	"github.com/katedegree/spark/api/internal/domain/storage"
+	"github.com/katedegree99/spark/api/internal/domain/repository"
+	"github.com/katedegree99/spark/api/internal/domain/storage"
 )
 
 type ImageUsecase interface {

@@ -10,7 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/katedegree/spark/api/internal/domain/storage"
+	"github.com/katedegree99/spark/api/internal/domain/storage"
 )
 
 type r2Service struct {

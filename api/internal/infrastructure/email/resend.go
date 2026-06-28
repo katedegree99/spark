@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	domainemail "github.com/katedegree/spark/api/internal/domain/email"
+	domainemail "github.com/katedegree99/spark/api/internal/domain/email"
 	"github.com/resend/resend-go/v2"
 )
 

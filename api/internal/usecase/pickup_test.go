@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/katedegree/spark/api/internal/domain/repository"
+	"github.com/katedegree99/spark/api/internal/domain/repository"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

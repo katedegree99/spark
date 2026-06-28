@@ -1,4 +1,4 @@
-module github.com/katedegree/spark/api
+module github.com/katedegree99/spark/api
 
 go 1.25.8
 

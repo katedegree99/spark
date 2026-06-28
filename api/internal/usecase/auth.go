@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/katedegree/spark/api/internal/domain/email"
-	"github.com/katedegree/spark/api/internal/domain/repository"
+	"github.com/katedegree99/spark/api/internal/domain/email"
+	"github.com/katedegree99/spark/api/internal/domain/repository"
 	"golang.org/x/crypto/bcrypt"
 	"google.golang.org/api/idtoken"
 )
