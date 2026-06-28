@@ -9,7 +9,7 @@ import (
 
 	"github.com/anthropics/anthropic-sdk-go"
 	"github.com/anthropics/anthropic-sdk-go/option"
-	domainllm "github.com/katedegree/spark/api/internal/domain/llm"
+	domainllm "github.com/katedegree99/spark/api/internal/domain/llm"
 )
 
 const systemPrompt = `あなたは「やっていること」「やってみたいこと」タグの正規化担当です。

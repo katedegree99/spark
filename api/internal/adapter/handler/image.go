@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/katedegree/spark/api/internal/usecase"
-	"github.com/katedegree/spark/api/pkg/generated"
+	"github.com/katedegree99/spark/api/internal/usecase"
+	"github.com/katedegree99/spark/api/pkg/generated"
 )
 
 type ImageHandler struct {

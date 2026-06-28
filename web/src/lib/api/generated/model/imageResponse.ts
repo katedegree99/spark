@@ -10,5 +10,5 @@ export interface ImageResponse {
   id?: number;
   directory?: string;
   url?: string;
-  created_at?: string;
+  createdAt?: string;
 }

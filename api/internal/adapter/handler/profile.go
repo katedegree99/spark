@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 
-	authmw "github.com/katedegree/spark/api/internal/adapter/middleware"
-	"github.com/katedegree/spark/api/internal/domain/repository"
-	"github.com/katedegree/spark/api/internal/usecase"
-	"github.com/katedegree/spark/api/pkg/generated"
+	authmw "github.com/katedegree99/spark/api/internal/adapter/middleware"
+	"github.com/katedegree99/spark/api/internal/domain/repository"
+	"github.com/katedegree99/spark/api/internal/usecase"
+	"github.com/katedegree99/spark/api/pkg/generated"
 )
 
 type ProfileHandler struct {

@@ -5,8 +5,8 @@ import (
 	"errors"
 	"time"
 
-	"github.com/katedegree/spark/api/internal/domain/model"
-	domainrepo "github.com/katedegree/spark/api/internal/domain/repository"
+	"github.com/katedegree99/spark/api/internal/domain/model"
+	domainrepo "github.com/katedegree99/spark/api/internal/domain/repository"
 	"gorm.io/gorm"
 )
 

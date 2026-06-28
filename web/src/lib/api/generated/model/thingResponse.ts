@@ -11,5 +11,5 @@ export interface ThingResponse {
   name?: string;
   /** 正規化エイリアス一覧（name の値を含む） */
   aliases?: string[];
-  created_at?: string;
+  createdAt?: string;
 }

@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/katedegree/spark/api/internal/domain/repository"
+	"github.com/katedegree99/spark/api/internal/domain/repository"
 )
 
 var ErrProfileAlreadyExists = errors.New("profile already exists")

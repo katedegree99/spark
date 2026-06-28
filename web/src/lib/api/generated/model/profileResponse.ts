@@ -9,15 +9,15 @@ import type { ImageResponse } from './imageResponse';
 import type { ThingResponse } from './thingResponse';
 
 export interface ProfileResponse {
-  user_id?: number;
+  userId?: number;
   name?: string;
   /** @nullable */
   bio?: string | null;
-  icon_image?: ImageResponse | null;
+  iconImage?: ImageResponse | null;
   /** やっていること */
   doings?: ThingResponse[];
   /** やってみたいこと */
   wants?: ThingResponse[];
-  created_at?: string;
-  updated_at?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }

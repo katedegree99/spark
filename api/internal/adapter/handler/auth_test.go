@@ -11,9 +11,9 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/katedegree/spark/api/internal/adapter/handler"
-	"github.com/katedegree/spark/api/internal/adapter/router"
-	"github.com/katedegree/spark/api/internal/usecase"
+	"github.com/katedegree99/spark/api/internal/adapter/handler"
+	"github.com/katedegree99/spark/api/internal/adapter/router"
+	"github.com/katedegree99/spark/api/internal/usecase"
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

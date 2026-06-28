@@ -12,9 +12,9 @@ export interface ProfileUpdateRequest {
   /** @nullable */
   bio?: string | null;
   /** @nullable */
-  icon_image_id?: number | null;
+  iconImageId?: number | null;
   /** やっていることを上書き更新する thing ID リスト */
-  doing_thing_ids?: number[];
+  doingThingIds?: number[];
   /** やってみたいことを上書き更新する thing ID リスト */
-  want_thing_ids?: number[];
+  wantThingIds?: number[];
 }
