@@ -14,6 +14,8 @@ import (
 
 type mockPickupRepository struct {
 	findCandidates func(ctx context.Context, excludeUserID uint) ([]*repository.PickupCandidateRecord, error)
+	findCache      func(ctx context.Context, userID uint, date time.Time) ([]uint, error)
+	saveCache      func(ctx context.Context, userID uint, date time.Time, pickedUserIDs []uint) error
 }
 
 func (m *mockPickupRepository) FindCandidates(ctx context.Context, excludeUserID uint) ([]*repository.PickupCandidateRecord, error) {
@@ -21,6 +23,20 @@ func (m *mockPickupRepository) FindCandidates(ctx context.Context, excludeUserID
 		return m.findCandidates(ctx, excludeUserID)
 	}
 	return nil, nil
+}
+
+func (m *mockPickupRepository) FindCache(ctx context.Context, userID uint, date time.Time) ([]uint, error) {
+	if m.findCache != nil {
+		return m.findCache(ctx, userID, date)
+	}
+	return nil, nil
+}
+
+func (m *mockPickupRepository) SaveCache(ctx context.Context, userID uint, date time.Time, pickedUserIDs []uint) error {
+	if m.saveCache != nil {
+		return m.saveCache(ctx, userID, date, pickedUserIDs)
+	}
+	return nil
 }
 
 type mockThingRepository struct {

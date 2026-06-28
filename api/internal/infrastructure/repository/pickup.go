@@ -2,6 +2,8 @@ package repository
 
 import (
 	"context"
+	"errors"
+	"time"
 
 	"github.com/katedegree/spark/api/internal/domain/model"
 	domainrepo "github.com/katedegree/spark/api/internal/domain/repository"
@@ -70,4 +72,30 @@ func (r *pickupRepository) FindCandidates(ctx context.Context, excludeUserID uin
 		})
 	}
 	return records, nil
+}
+
+func (r *pickupRepository) FindCache(ctx context.Context, userID uint, date time.Time) ([]uint, error) {
+	var row model.UserPickupCache
+	err := r.db.WithContext(ctx).
+		Where("user_id = ? AND cache_date = ?", userID, date.Format("2006-01-02")).
+		First(&row).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return []uint(row.PickedUserIDs), nil
+}
+
+func (r *pickupRepository) SaveCache(ctx context.Context, userID uint, date time.Time, pickedUserIDs []uint) error {
+	row := model.UserPickupCache{
+		UserID:        userID,
+		CacheDate:     date,
+		PickedUserIDs: model.UintSlice(pickedUserIDs),
+	}
+	return r.db.WithContext(ctx).
+		Where("user_id = ? AND cache_date = ?", userID, date.Format("2006-01-02")).
+		Assign(model.UserPickupCache{PickedUserIDs: row.PickedUserIDs}).
+		FirstOrCreate(&row).Error
 }
