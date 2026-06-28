@@ -96,6 +96,19 @@ Table user_wants {
   Note: 'やってみたいこと'
 }
 
+Table user_pickup_caches {
+  user_id         bigint [not null]
+  cache_date      date [not null]
+  picked_user_ids json [not null]
+  created_at      datetime(3) [not null, default: `CURRENT_TIMESTAMP(3)`]
+
+  indexes {
+    (user_id, cache_date) [pk]
+  }
+
+  Note: 'ピックアップ候補ユーザーのキャッシュ。1ユーザー×1日で picked_user_ids を JSON で保持'
+}
+
 Ref fk_refresh_tokens_user: refresh_tokens.user_id > users.id [delete: cascade]
 Ref fk_thing_aliases_thing: thing_aliases.thing_id > things.id [delete: cascade]
 Ref fk_profiles_user: profiles.user_id > users.id [delete: cascade]

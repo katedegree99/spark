@@ -108,6 +108,27 @@ type OtpVerifyRequest struct {
 	Email openapi_types.Email `json:"email"`
 }
 
+// PickupUserResponse defines model for PickupUserResponse.
+type PickupUserResponse struct {
+	Bio *string `json:"bio,omitempty"`
+
+	// IconUrl プロフィールアイコン画像の URL
+	IconUrl *string `json:"iconUrl,omitempty"`
+
+	// MatchedTags ログインユーザーと一致するタグの一覧
+	MatchedTags *[]ThingResponse `json:"matchedTags,omitempty"`
+	Name        *string          `json:"name,omitempty"`
+
+	// UnmatchedTags ログインユーザーと一致しないタグの一覧
+	UnmatchedTags *[]ThingResponse `json:"unmatchedTags,omitempty"`
+	UserId        *int             `json:"userId,omitempty"`
+}
+
+// PickupUsersResponse defines model for PickupUsersResponse.
+type PickupUsersResponse struct {
+	Users *[]PickupUserResponse `json:"users,omitempty"`
+}
+
 // ProfileCreateRequest defines model for ProfileCreateRequest.
 type ProfileCreateRequest struct {
 	Bio *string `json:"bio,omitempty"`
@@ -170,7 +191,7 @@ type ThingCreateRequest struct {
 
 // ThingResponse defines model for ThingResponse.
 type ThingResponse struct {
-	// Aliases 正規化エイリアス一覧
+	// Aliases 正規化エイリアス一覧（name の値を含む）
 	Aliases   *[]string  `json:"aliases,omitempty"`
 	CreatedAt *time.Time `json:"created_at,omitempty"`
 	Id        *int       `json:"id,omitempty"`
@@ -287,6 +308,9 @@ type ServerInterface interface {
 	// 新しい事柄を作成する
 	// (POST /things)
 	CreateThing(ctx echo.Context) error
+	// 今日のピックアップユーザー一覧を取得する
+	// (GET /users/pickup)
+	ListPickupUsers(ctx echo.Context) error
 }
 
 // ServerInterfaceWrapper converts echo contexts to parameters.
@@ -425,6 +449,17 @@ func (w *ServerInterfaceWrapper) CreateThing(ctx echo.Context) error {
 	return err
 }
 
+// ListPickupUsers converts echo context to params.
+func (w *ServerInterfaceWrapper) ListPickupUsers(ctx echo.Context) error {
+	var err error
+
+	ctx.Set(string(BearerAuthScopes), []string{})
+
+	// Invoke the callback with all the unmarshaled arguments
+	err = w.Handler.ListPickupUsers(ctx)
+	return err
+}
+
 // This is a simple interface which specifies echo.Route addition functions which
 // are present on both echo.Echo and echo.Group, since we want to allow using
 // either of them for path registration
@@ -484,6 +519,7 @@ func RegisterHandlersWithOptions(router EchoRouter, si ServerInterface, options 
 	router.POST(options.BaseURL+"/profiles/me", wrapper.CreateMyProfile, options.OperationMiddlewares["createMyProfile"]...)
 	router.GET(options.BaseURL+"/things", wrapper.ListThings, options.OperationMiddlewares["listThings"]...)
 	router.POST(options.BaseURL+"/things", wrapper.CreateThing, options.OperationMiddlewares["createThing"]...)
+	router.GET(options.BaseURL+"/users/pickup", wrapper.ListPickupUsers, options.OperationMiddlewares["listPickupUsers"]...)
 
 }
 
@@ -1084,6 +1120,41 @@ func (response CreateThing422JSONResponse) VisitCreateThingResponse(w http.Respo
 	return err
 }
 
+type ListPickupUsersRequestObject struct {
+}
+
+type ListPickupUsersResponseObject interface {
+	VisitListPickupUsersResponse(w http.ResponseWriter) error
+}
+
+type ListPickupUsers200JSONResponse PickupUsersResponse
+
+func (response ListPickupUsers200JSONResponse) VisitListPickupUsersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListPickupUsers401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListPickupUsers401JSONResponse) VisitListPickupUsersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 	// GoogleでログインまたはID連携
@@ -1122,6 +1193,9 @@ type StrictServerInterface interface {
 	// 新しい事柄を作成する
 	// (POST /things)
 	CreateThing(ctx context.Context, request CreateThingRequestObject) (CreateThingResponseObject, error)
+	// 今日のピックアップユーザー一覧を取得する
+	// (GET /users/pickup)
+	ListPickupUsers(ctx context.Context, request ListPickupUsersRequestObject) (ListPickupUsersResponseObject, error)
 }
 
 type StrictHandlerFunc func(ctx echo.Context, request any) (any, error)
@@ -1468,6 +1542,29 @@ func (sh *strictHandler) CreateThing(ctx echo.Context) error {
 		return err
 	} else if validResponse, ok := response.(CreateThingResponseObject); ok {
 		return validResponse.VisitCreateThingResponse(ctx.Response())
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// ListPickupUsers operation middleware
+func (sh *strictHandler) ListPickupUsers(ctx echo.Context) error {
+	var request ListPickupUsersRequestObject
+
+	handler := func(ctx echo.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ListPickupUsers(ctx.Request().Context(), request.(ListPickupUsersRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListPickupUsers")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return err
+	} else if validResponse, ok := response.(ListPickupUsersResponseObject); ok {
+		return validResponse.VisitListPickupUsersResponse(ctx.Response())
 	} else if response != nil {
 		return fmt.Errorf("unexpected response type: %T", response)
 	}
