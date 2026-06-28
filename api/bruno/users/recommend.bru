@@ -1,0 +1,48 @@
+meta {
+  name: おすすめユーザー一覧取得
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{base_url}}/users/recommend
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{access_token}}
+}
+
+vars:pre-request {
+  base_url: http://localhost:8080
+}
+
+tests {
+  test("ステータスコードが 200 であること", function() {
+    expect(res.status).to.equal(200);
+  });
+  
+  test("users が配列であること", function() {
+    expect(res.body.users).to.be.an("array");
+  });
+  
+  test("各ユーザーに userId・name・commonCount が含まれること", function() {
+    res.body.users.forEach(function(user) {
+      expect(user.userId).to.be.a("number");
+      expect(user.name).to.be.a("string");
+      expect(user.commonCount).to.be.a("number");
+    });
+  });
+  
+  test("matchedTags に aliases が含まれないこと", function() {
+    res.body.users.forEach(function(user) {
+      (user.matchedTags || []).forEach(function(tag) {
+        expect(tag).to.not.have.property("aliases");
+      });
+      (user.unmatchedTags || []).forEach(function(tag) {
+        expect(tag).to.not.have.property("aliases");
+      });
+    });
+  });
+}

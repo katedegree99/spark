@@ -2,13 +2,17 @@ package usecase
 
 import (
 	"context"
+	"math/rand/v2"
 	"sort"
 	"time"
 
 	"github.com/katedegree/spark/api/internal/domain/repository"
 )
 
-const pickupLimit = 5
+const (
+	pickupLimit     = 5
+	pickupPoolRatio = 3 // 上位 pickupLimit×3 件からランダムに選出
+)
 
 type PickupUserResult struct {
 	UserID          uint
@@ -52,13 +56,23 @@ func today() time.Time {
 func (u *pickupUsecase) ListPickup(ctx context.Context, userID uint) ([]*PickupUserResult, error) {
 	date := today()
 
-	// キャッシュがあれば再計算せずに返す
+	// 当日キャッシュがあれば再計算しない
 	cachedIDs, err := u.pickupRepo.FindCache(ctx, userID, date)
 	if err != nil {
 		return nil, err
 	}
 	if cachedIDs != nil {
 		return u.buildFromIDs(ctx, userID, cachedIDs)
+	}
+
+	// 過去に表示済みのユーザーを除外
+	shownIDs, err := u.pickupRepo.FindShownUserIDs(ctx, userID)
+	if err != nil {
+		return nil, err
+	}
+	shownSet := make(map[uint]struct{}, len(shownIDs))
+	for _, id := range shownIDs {
+		shownSet[id] = struct{}{}
 	}
 
 	doingIDs, err := u.profileRepo.FindDoingIDsByUserID(ctx, userID)
@@ -91,6 +105,10 @@ func (u *pickupUsecase) ListPickup(ctx context.Context, userID uint) ([]*PickupU
 
 	scored := make([]scoredCandidate, 0, len(candidates))
 	for _, c := range candidates {
+		// 表示済みはスキップ
+		if _, seen := shownSet[c.UserID]; seen {
+			continue
+		}
 		var matched, unmatched []uint
 		for _, id := range c.ThingIDs {
 			if _, ok := myThingSet[id]; ok {
@@ -102,9 +120,17 @@ func (u *pickupUsecase) ListPickup(ctx context.Context, userID uint) ([]*PickupU
 		scored = append(scored, scoredCandidate{c, matched, unmatched})
 	}
 
+	// 共通タグ数で降順ソート
 	sort.Slice(scored, func(i, j int) bool {
 		return len(scored[i].matched) > len(scored[j].matched)
 	})
+
+	// 上位 pool 件に絞ってからランダムに pickupLimit 件選出
+	pool := pickupLimit * pickupPoolRatio
+	if len(scored) > pool {
+		scored = scored[:pool]
+	}
+	rand.Shuffle(len(scored), func(i, j int) { scored[i], scored[j] = scored[j], scored[i] })
 	if len(scored) > pickupLimit {
 		scored = scored[:pickupLimit]
 	}
@@ -113,7 +139,12 @@ func (u *pickupUsecase) ListPickup(ctx context.Context, userID uint) ([]*PickupU
 	for _, s := range scored {
 		pickedIDs = append(pickedIDs, s.candidate.UserID)
 	}
+
+	// キャッシュと履歴を保存
 	if err := u.pickupRepo.SaveCache(ctx, userID, date, pickedIDs); err != nil {
+		return nil, err
+	}
+	if err := u.pickupRepo.SaveHistory(ctx, userID, pickedIDs); err != nil {
 		return nil, err
 	}
 
@@ -126,7 +157,6 @@ func (u *pickupUsecase) ListPickup(ctx context.Context, userID uint) ([]*PickupU
 				return nil, err
 			}
 		}
-
 		var unmatchedThings []*repository.ThingRecord
 		if len(s.unmatched) > 0 {
 			unmatchedThings, err = u.thingRepo.FindByIDs(ctx, s.unmatched)
@@ -159,8 +189,6 @@ func (u *pickupUsecase) ListPickup(ctx context.Context, userID uint) ([]*PickupU
 	return results, nil
 }
 
-// buildFromIDs はキャッシュに保存された user_id 順で結果を組み立てる。
-// matchedTags / unmatchedTags は呼び出しユーザーのタグと再照合する。
 func (u *pickupUsecase) buildFromIDs(ctx context.Context, myUserID uint, pickedIDs []uint) ([]*PickupUserResult, error) {
 	doingIDs, err := u.profileRepo.FindDoingIDsByUserID(ctx, myUserID)
 	if err != nil {

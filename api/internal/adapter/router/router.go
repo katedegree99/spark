@@ -31,14 +31,19 @@ func jwtMiddlewareAdapter(mw echo.MiddlewareFunc) generated.StrictMiddlewareFunc
 		"GetMyProfile":     true,
 		"UpdateMyProfile":  true,
 		"Logout":           true,
-		"ListPickupUsers":  true,
+		"ListPickupUsers":    true,
+		"ListRecommendUsers": true,
 	}
 	return func(f generated.StrictHandlerFunc, operationID string) generated.StrictHandlerFunc {
 		if !protected[operationID] {
 			return f
 		}
 		return func(c echo.Context, req any) (any, error) {
-			if err := mw(func(c echo.Context) error { return nil })(c); err != nil {
+			var nextCalled bool
+			if err := mw(func(c echo.Context) error {
+				nextCalled = true
+				return nil
+			})(c); err != nil || !nextCalled {
 				return nil, err
 			}
 			return f(c, req)

@@ -285,6 +285,45 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationError'
 
+  /users/new:
+    get:
+      tags: [users]
+      summary: 新着ユーザー一覧を取得する
+      description: |
+        登録日時が新しい順にユーザーを返す。
+        ホーム画面の「新着」セクションに表示する。
+      operationId: listNewUsers
+      responses:
+        '200':
+          description: 新着ユーザー一覧
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NewUsersResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /users/recommend:
+    get:
+      tags: [users]
+      summary: おすすめユーザー一覧を取得する
+      description: |
+        ログイン中ユーザーと共通のタグ（doing / want）が多い順に
+        おすすめユーザーを返す。
+        共通タグ数・マッチタグ・未マッチタグを含む。
+      operationId: listRecommendUsers
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: おすすめユーザー一覧
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecommendUsersResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
   /users/pickup:
     get:
       tags: [users]
@@ -596,6 +635,16 @@ components:
           type: string
           format: date-time
 
+    TagResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: コーディング
+
     ThingsResponse:
       type: object
       properties:
@@ -638,6 +687,70 @@ components:
           type: string
           format: date-time
 
+    NewUsersResponse:
+      type: object
+      properties:
+        users:
+          type: array
+          items:
+            $ref: '#/components/schemas/NewUserResponse'
+
+    NewUserResponse:
+      type: object
+      properties:
+        userId:
+          type: integer
+          example: 42
+        name:
+          type: string
+          example: 酒井 悠人
+        iconUrl:
+          type: string
+          nullable: true
+          description: プロフィールアイコン画像の URL
+          example: https://pub-xxx.r2.dev/icon/abc123.jpg
+
+    RecommendUsersResponse:
+      type: object
+      properties:
+        users:
+          type: array
+          items:
+            $ref: '#/components/schemas/RecommendUserResponse'
+
+    RecommendUserResponse:
+      type: object
+      properties:
+        userId:
+          type: integer
+          example: 42
+        name:
+          type: string
+          example: 小林 田穂
+        bio:
+          type: string
+          nullable: true
+          example: 自己紹介が入ります
+        iconUrl:
+          type: string
+          nullable: true
+          description: プロフィールアイコン画像の URL
+          example: https://pub-xxx.r2.dev/icon/abc123.jpg
+        commonCount:
+          type: integer
+          description: ログインユーザーと共通のタグ数
+          example: 40
+        matchedTags:
+          type: array
+          items:
+            $ref: '#/components/schemas/TagResponse'
+          description: ログインユーザーと一致するタグの一覧
+        unmatchedTags:
+          type: array
+          items:
+            $ref: '#/components/schemas/TagResponse'
+          description: ログインユーザーと一致しないタグの一覧
+
     PickupUsersResponse:
       type: object
       properties:
@@ -667,12 +780,12 @@ components:
         matchedTags:
           type: array
           items:
-            $ref: '#/components/schemas/ThingResponse'
+            $ref: '#/components/schemas/TagResponse'
           description: ログインユーザーと一致するタグの一覧
         unmatchedTags:
           type: array
           items:
-            $ref: '#/components/schemas/ThingResponse'
+            $ref: '#/components/schemas/TagResponse'
           description: ログインユーザーと一致しないタグの一覧
 
     ErrorResponse:
