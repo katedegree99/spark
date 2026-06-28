@@ -179,14 +179,12 @@ func buildProfileResponse(r *usecase.ProfileResult) generated.ProfileResponse {
 
 func thingRecordToResponse(t *repository.ThingRecord) generated.ThingResponse {
 	id := int(t.ID)
-	resp := generated.ThingResponse{
-		Id:   &id,
-		Name: &t.Name,
+	aliases := append([]string{t.Name}, t.Aliases...)
+	return generated.ThingResponse{
+		Id:      &id,
+		Name:    &t.Name,
+		Aliases: &aliases,
 	}
-	if len(t.Aliases) > 0 {
-		resp.Aliases = &t.Aliases
-	}
-	return resp
 }
 
 // toUintSlice converts *[]int to []uint.

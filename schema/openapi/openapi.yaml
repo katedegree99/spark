@@ -17,6 +17,8 @@ tags:
     description: 事柄マスタ
   - name: profile
     description: プロフィール
+  - name: users
+    description: ユーザー
 
 paths:
   /auth/register:
@@ -282,6 +284,27 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '422':
           $ref: '#/components/responses/ValidationError'
+
+  /users/pickup:
+    get:
+      tags: [users]
+      summary: 今日のピックアップユーザー一覧を取得する
+      description: |
+        ログイン中ユーザーと共通のタグ（doing / want）が多い順に
+        おすすめユーザーを返す。
+        共通タグ数が多い上位数件を返す。
+      operationId: listPickupUsers
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: ピックアップユーザー一覧
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PickupUsersResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
 
   /profiles/me:
     post:
@@ -567,8 +590,8 @@ components:
           type: array
           items:
             type: string
-          description: 正規化エイリアス一覧
-          example: [programming, コーディング]
+          description: 正規化エイリアス一覧（name の値を含む）
+          example: [プログラミング, programming, コーディング]
         created_at:
           type: string
           format: date-time
@@ -614,6 +637,43 @@ components:
         updated_at:
           type: string
           format: date-time
+
+    PickupUsersResponse:
+      type: object
+      properties:
+        users:
+          type: array
+          items:
+            $ref: '#/components/schemas/PickupUserResponse'
+
+    PickupUserResponse:
+      type: object
+      properties:
+        userId:
+          type: integer
+          example: 42
+        name:
+          type: string
+          example: 堺 理人
+        bio:
+          type: string
+          nullable: true
+          example: 自己紹介が入ります
+        iconUrl:
+          type: string
+          nullable: true
+          description: プロフィールアイコン画像の URL
+          example: https://pub-xxx.r2.dev/icon/abc123.jpg
+        matchedTags:
+          type: array
+          items:
+            $ref: '#/components/schemas/ThingResponse'
+          description: ログインユーザーと一致するタグの一覧
+        unmatchedTags:
+          type: array
+          items:
+            $ref: '#/components/schemas/ThingResponse'
+          description: ログインユーザーと一致しないタグの一覧
 
     ErrorResponse:
       type: object

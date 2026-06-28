@@ -25,6 +25,7 @@ import type {
   LoginRequest,
   OtpSentResponse,
   OtpVerifyRequest,
+  PickupUsersResponse,
   ProfileCreateRequest,
   ProfileResponse,
   ProfileUpdateRequest,
@@ -808,6 +809,84 @@ export const useCreateThing = <TError = Promise<UnauthorizedResponse | ErrorResp
   const swrFn = getCreateThingMutationFetcher(fetchOptions);
 
   const query = useSWRMutation(swrKey, swrFn, swrOptions)
+
+  return {
+    swrKey,
+    ...query
+  }
+}
+
+export type listPickupUsersResponse200 = {
+  data: PickupUsersResponse
+  status: 200
+}
+
+export type listPickupUsersResponse401 = {
+  data: UnauthorizedResponse
+  status: 401
+}
+
+export type listPickupUsersResponseSuccess = (listPickupUsersResponse200) & {
+  headers: Headers;
+};
+export type listPickupUsersResponseError = (listPickupUsersResponse401) & {
+  headers: Headers;
+};
+
+export type listPickupUsersResponse = (listPickupUsersResponseSuccess | listPickupUsersResponseError)
+
+export const getListPickupUsersUrl = () => {
+
+
+
+
+  return `/users/pickup`
+}
+
+/**
+ * ログイン中ユーザーと共通のタグ（doing / want）が多い順に
+ * おすすめユーザーを返す。
+ * 共通タグ数が多い上位数件を返す。
+ * @summary 今日のピックアップユーザー一覧を取得する
+ */
+export const listPickupUsers = async ( options?: RequestInit): Promise<listPickupUsersResponse> => {
+
+  const res = await fetch(getListPickupUsersUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: listPickupUsersResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as listPickupUsersResponse
+}
+
+
+
+
+export const getListPickupUsersKey = () => [`/users/pickup`] as const;
+
+export type ListPickupUsersQueryResult = NonNullable<Awaited<ReturnType<typeof listPickupUsers>>>
+
+/**
+ * @summary 今日のピックアップユーザー一覧を取得する
+ */
+export const useListPickupUsers = <TError = Promise<UnauthorizedResponse>>(
+   options?: { swr?:SWRConfiguration<Awaited<ReturnType<typeof listPickupUsers>>, TError> & { swrKey?: Key, enabled?: boolean }, fetch?: RequestInit }
+) => {
+  const {swr: swrOptions, fetch: fetchOptions} = options ?? {}
+
+  const isEnabled = swrOptions?.enabled !== false
+  const swrKey = swrOptions?.swrKey ?? (() => isEnabled ? getListPickupUsersKey() : null);
+  const swrFn = () => listPickupUsers(fetchOptions)
+
+  const query = useSwr<Awaited<ReturnType<typeof swrFn>>, TError>(swrKey, swrFn, swrOptions)
 
   return {
     swrKey,

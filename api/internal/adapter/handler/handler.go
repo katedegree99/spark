@@ -8,6 +8,7 @@ type Handler struct {
 	*ImageHandler
 	*ProfileHandler
 	*ThingHandler
+	*UsersHandler
 }
 
 var _ generated.StrictServerInterface = (*Handler)(nil)

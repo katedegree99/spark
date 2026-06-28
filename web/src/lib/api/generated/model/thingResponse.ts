@@ -9,7 +9,7 @@
 export interface ThingResponse {
   id?: number;
   name?: string;
-  /** 正規化エイリアス一覧 */
+  /** 正規化エイリアス一覧（name の値を含む） */
   aliases?: string[];
   created_at?: string;
 }

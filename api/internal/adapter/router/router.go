@@ -31,6 +31,7 @@ func jwtMiddlewareAdapter(mw echo.MiddlewareFunc) generated.StrictMiddlewareFunc
 		"GetMyProfile":     true,
 		"UpdateMyProfile":  true,
 		"Logout":           true,
+		"ListPickupUsers":  true,
 	}
 	return func(f generated.StrictHandlerFunc, operationID string) generated.StrictHandlerFunc {
 		if !protected[operationID] {

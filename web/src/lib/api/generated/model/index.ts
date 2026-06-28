@@ -15,6 +15,8 @@ export * from './listThingsParams';
 export * from './loginRequest';
 export * from './otpSentResponse';
 export * from './otpVerifyRequest';
+export * from './pickupUserResponse';
+export * from './pickupUsersResponse';
 export * from './profileCreateRequest';
 export * from './profileResponse';
 export * from './profileUpdateRequest';
