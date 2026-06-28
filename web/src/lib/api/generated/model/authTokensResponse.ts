@@ -8,14 +8,14 @@
 import type { AuthTokensResponseTokenType } from './authTokensResponseTokenType';
 
 export interface AuthTokensResponse {
-  access_token?: string;
-  refresh_token?: string;
-  token_type?: AuthTokensResponseTokenType;
+  accessToken?: string;
+  refreshToken?: string;
+  tokenType?: AuthTokensResponseTokenType;
   /** アクセストークンの有効期限（秒） */
-  expires_in?: number;
+  expiresIn?: number;
   /**
      * プロフィールが設定済みかどうか。
      * false の場合はプロフィール設定画面へ遷移する。
      */
-  profile_exists?: boolean;
+  profileExists?: boolean;
 }

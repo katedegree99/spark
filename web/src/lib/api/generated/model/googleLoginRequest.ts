@@ -8,5 +8,5 @@
 
 export interface GoogleLoginRequest {
   /** Googleから取得したIDトークン */
-  id_token: string;
+  idToken: string;
 }

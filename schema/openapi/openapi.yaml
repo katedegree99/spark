@@ -455,17 +455,17 @@ components:
 
     GoogleLoginRequest:
       type: object
-      required: [id_token]
+      required: [idToken]
       properties:
-        id_token:
+        idToken:
           type: string
           description: Googleから取得したIDトークン
 
     RefreshTokenRequest:
       type: object
-      required: [refresh_token]
+      required: [refreshToken]
       properties:
-        refresh_token:
+        refreshToken:
           type: string
 
     ThingCreateRequest:
@@ -489,17 +489,17 @@ components:
           type: string
           nullable: true
           example: よろしくお願いします
-        icon_image_id:
+        iconImageId:
           type: integer
           nullable: true
           description: 事前に POST /images でアップロードした画像の ID
-        doing_thing_ids:
+        doingThingIds:
           type: array
           items:
             type: integer
           description: やっていることの thing ID リスト
           example: [1, 2]
-        want_thing_ids:
+        wantThingIds:
           type: array
           items:
             type: integer
@@ -515,15 +515,15 @@ components:
         bio:
           type: string
           nullable: true
-        icon_image_id:
+        iconImageId:
           type: integer
           nullable: true
-        doing_thing_ids:
+        doingThingIds:
           type: array
           items:
             type: integer
           description: やっていることを上書き更新する thing ID リスト
-        want_thing_ids:
+        wantThingIds:
           type: array
           items:
             type: integer
@@ -535,7 +535,7 @@ components:
         message:
           type: string
           example: OTPをメールに送信しました
-        expires_in:
+        expiresIn:
           type: integer
           description: OTPの有効期限（秒）
           example: 300
@@ -543,19 +543,19 @@ components:
     AuthTokensResponse:
       type: object
       properties:
-        access_token:
+        accessToken:
           type: string
-        refresh_token:
+        refreshToken:
           type: string
-        token_type:
+        tokenType:
           type: string
           enum: [Bearer]
           example: Bearer
-        expires_in:
+        expiresIn:
           type: integer
           description: アクセストークンの有効期限（秒）
           example: 3600
-        profile_exists:
+        profileExists:
           type: boolean
           description: |
             プロフィールが設定済みかどうか。
@@ -573,7 +573,7 @@ components:
         url:
           type: string
           example: https://pub-xxx.r2.dev/profiles/icons/abc123.jpg
-        created_at:
+        createdAt:
           type: string
           format: date-time
 
@@ -592,7 +592,7 @@ components:
             type: string
           description: 正規化エイリアス一覧（name の値を含む）
           example: [プログラミング, programming, コーディング]
-        created_at:
+        createdAt:
           type: string
           format: date-time
 
@@ -607,7 +607,7 @@ components:
     ProfileResponse:
       type: object
       properties:
-        user_id:
+        userId:
           type: integer
           example: 42
         name:
@@ -617,7 +617,7 @@ components:
           type: string
           nullable: true
           example: よろしくお願いします
-        icon_image:
+        iconImage:
           nullable: true
           allOf:
             - $ref: '#/components/schemas/ImageResponse'
@@ -631,10 +631,10 @@ components:
           items:
             $ref: '#/components/schemas/ThingResponse'
           description: やってみたいこと
-        created_at:
+        createdAt:
           type: string
           format: date-time
-        updated_at:
+        updatedAt:
           type: string
           format: date-time
 

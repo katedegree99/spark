@@ -15,9 +15,9 @@ export interface ProfileCreateRequest {
      * 事前に POST /images でアップロードした画像の ID
      * @nullable
      */
-  icon_image_id?: number | null;
+  iconImageId?: number | null;
   /** やっていることの thing ID リスト */
-  doing_thing_ids?: number[];
+  doingThingIds?: number[];
   /** やってみたいことの thing ID リスト */
-  want_thing_ids?: number[];
+  wantThingIds?: number[];
 }

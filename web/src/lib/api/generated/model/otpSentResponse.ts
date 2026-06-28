@@ -9,5 +9,5 @@
 export interface OtpSentResponse {
   message?: string;
   /** OTPの有効期限（秒） */
-  expires_in?: number;
+  expiresIn?: number;
 }
