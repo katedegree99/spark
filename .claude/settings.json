@@ -7,7 +7,8 @@
     "allow": [
       "Bash(git push origin *)",
       "Bash(git -C * push origin *)",
-      "Write(.claude/skills/*)"
+      "Write(.claude/skills/*)",
+      "Bash(gh *)"
     ],
     "deny": [
       "Bash(git push --force*)",

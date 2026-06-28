@@ -8,6 +8,7 @@ import (
 	"github.com/katedegree99/spark/api/internal/domain/model"
 	domainrepo "github.com/katedegree99/spark/api/internal/domain/repository"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 type pickupRepository struct {
@@ -98,4 +99,36 @@ func (r *pickupRepository) SaveCache(ctx context.Context, userID uint, date time
 		Where("user_id = ? AND cache_date = ?", userID, date.Format("2006-01-02")).
 		Assign(model.UserPickupCache{PickedUserIDs: row.PickedUserIDs}).
 		FirstOrCreate(&row).Error
+}
+
+func (r *pickupRepository) FindShownUserIDs(ctx context.Context, userID uint) ([]uint, error) {
+	var rows []model.UserPickupHistory
+	if err := r.db.WithContext(ctx).
+		Select("shown_user_id").
+		Where("user_id = ?", userID).
+		Find(&rows).Error; err != nil {
+		return nil, err
+	}
+	ids := make([]uint, 0, len(rows))
+	for _, row := range rows {
+		ids = append(ids, row.ShownUserID)
+	}
+	return ids, nil
+}
+
+func (r *pickupRepository) SaveHistory(ctx context.Context, userID uint, shownUserIDs []uint) error {
+	if len(shownUserIDs) == 0 {
+		return nil
+	}
+	rows := make([]model.UserPickupHistory, 0, len(shownUserIDs))
+	for _, shownID := range shownUserIDs {
+		rows = append(rows, model.UserPickupHistory{
+			UserID:      userID,
+			ShownUserID: shownID,
+		})
+	}
+	// 重複（uk_user_shown 違反）は無視して挿入
+	return r.db.WithContext(ctx).
+		Clauses(clause.OnConflict{DoNothing: true}).
+		Create(&rows).Error
 }

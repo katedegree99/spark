@@ -109,6 +109,19 @@ Table user_pickup_caches {
   Note: 'ピックアップ候補ユーザーのキャッシュ。1ユーザー×1日で picked_user_ids を JSON で保持'
 }
 
+Table user_pickup_histories {
+  id            bigint [pk, increment, not null]
+  user_id       bigint [not null]
+  shown_user_id bigint [not null]
+  created_at    datetime(3) [not null, default: `CURRENT_TIMESTAMP(3)`]
+
+  indexes {
+    (user_id, shown_user_id) [unique, name: "uk_user_shown"]
+  }
+
+  Note: 'ピックアップで表示済みのユーザー履歴'
+}
+
 Ref fk_refresh_tokens_user: refresh_tokens.user_id > users.id [delete: cascade]
 Ref fk_thing_aliases_thing: thing_aliases.thing_id > things.id [delete: cascade]
 Ref fk_profiles_user: profiles.user_id > users.id [delete: cascade]
@@ -117,3 +130,5 @@ Ref fk_user_doings_user: user_doings.user_id > users.id [delete: cascade]
 Ref fk_user_doings_thing: user_doings.thing_id > things.id [delete: cascade]
 Ref fk_user_wants_user: user_wants.user_id > users.id [delete: cascade]
 Ref fk_user_wants_thing: user_wants.thing_id > things.id [delete: cascade]
+Ref fk_user_pickup_histories_user: user_pickup_histories.user_id > users.id [delete: cascade]
+Ref fk_user_pickup_histories_shown: user_pickup_histories.shown_user_id > users.id [delete: cascade]
