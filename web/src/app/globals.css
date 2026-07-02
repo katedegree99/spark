@@ -26,6 +26,8 @@
 		var(--font-roboto), "SF Pro Text", -apple-system, BlinkMacSystemFont,
 		"Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", Meiryo,
 		sans-serif;
+	/* Figma 数字用「DIN Bold」の再現(OSS D-DIN)。`font-din` で利用する。 */
+	--font-din: var(--font-d-din), var(--font-roboto), sans-serif;
 
 	/* --- Design tokens → utilities ---
      spacing / font-size / font-weight / radius(12px=rounded-xl) は
@@ -48,6 +50,78 @@
 		var(--brand-orange) 50%,
 		var(--brand-red) 99.02%
 	);
+}
+
+/* タグ(共通/filled)の塗り。Figma のタグは共有グラデ(≈155°・縦)ではなく
+   ≈141°(横寄り)で、黄 → 橙 が主体になり赤は隅だけ。これにより 1px の
+   brand-yellow ボーダーがフィルに溶けて見えなくなる(縦グラデだと下辺が赤に
+   なり黄色ボーダーがリングとして浮く)。Figma: tag/main の gradient に一致。 */
+@utility bg-brand-gradient-tag {
+	background-image: linear-gradient(
+		141.2deg,
+		var(--brand-yellow) 0.98%,
+		var(--brand-orange) 50%,
+		var(--brand-red) 99.02%
+	);
+}
+
+/* タグ(共通/filled)の塗り + グラデ枠。padding-box に塗りグラデ(141°)、
+   border-box に塗りとほぼ同トーン(ブランド色を白 18% で気持ち明るくした)の
+   グラデ枠(153°)を重ねる。枠は背景に馴染む控えめなエッジで、白っぽく浮かない。
+   利用側は `border`(幅 1px)+ このユーティリティ + 白文字。 */
+@utility bg-brand-gradient-tag-fill {
+	border-color: transparent;
+	background-image:
+		linear-gradient(
+			141.2deg,
+			var(--brand-yellow) 0.98%,
+			var(--brand-orange) 50%,
+			var(--brand-red) 99.02%
+		),
+		linear-gradient(
+			153.42deg,
+			color-mix(in srgb, var(--brand-yellow) 82%, white) 0.98%,
+			color-mix(in srgb, var(--brand-orange) 82%, white) 50%,
+			color-mix(in srgb, var(--brand-red) 82%, white) 99.02%
+		);
+	background-origin: border-box;
+	background-clip: padding-box, border-box;
+}
+
+/* タグ(非共通/outline)の枠線グラデ。単色ボーダーではなく文字と同じ
+   ブランドグラデ(≈153°)の 1px 枠にする。white 塗り(padding-box)と
+   グラデ枠(border-box)の二重背景で描く。Figma: tag/border-main の stroke。
+   利用側は `border`(幅 1px)+ このユーティリティを併用する。 */
+@utility border-brand-gradient-tag {
+	border-color: transparent;
+	background-image:
+		linear-gradient(#fff, #fff),
+		linear-gradient(
+			153.42deg,
+			var(--brand-yellow) 0.98%,
+			var(--brand-orange) 50%,
+			var(--brand-red) 99.02%
+		);
+	background-origin: border-box;
+	background-clip: padding-box, border-box;
+}
+
+/* 円形アバター等の枠線グラデ。単色ボーダーの代わりにブランドグラデ(≈155°)の
+   枠にする。白塗り(padding-box)とグラデ枠(border-box)の二重背景で描く。
+   画像アバターでは白塗りは object-cover 画像の下に隠れるため見えず、枠だけが
+   グラデになる。利用側は `border`(任意幅)+ このユーティリティを併用する。 */
+@utility border-brand-gradient {
+	border-color: transparent;
+	background-image:
+		linear-gradient(#fff, #fff),
+		linear-gradient(
+			155.54deg,
+			var(--brand-yellow) 0.98%,
+			var(--brand-orange) 50%,
+			var(--brand-red) 99.02%
+		);
+	background-origin: border-box;
+	background-clip: padding-box, border-box;
 }
 
 /* 各画面ヘッダー帯の背景グラデ(黄 → 橙 → 赤、左下→右上方向)。
@@ -94,6 +168,8 @@ body {
 	background: var(--background);
 	color: var(--foreground);
 	font-family: var(--font-sans);
+	/* 最上部/最下部でのオーバースクロール(バウンス)を止め、コンテンツ外の空白露出を防ぐ */
+	overscroll-behavior-y: none;
 }
 
 /* ブラウザのオートフィル(予測変換選択)時もデザインを保つ。

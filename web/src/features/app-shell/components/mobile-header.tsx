@@ -1,10 +1,16 @@
+"use client";
+
 import { Bell } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/utils/cn";
 
 /**
- * SP 上部のグラデヘッダ(Server、Figma 準拠)。
- * サービス名 + キャッチに、右側へ白丸の通知ベル。`sticky top-0` で上部に残す。
- * `notificationCount` > 0 でベル右上に赤い未読バッジ(Figma: #ff3434)を表示。
+ * SP 上部のグラデヘッダ(Client、Figma 準拠)。
+ * サービス名 + キャッチに、右側へ白丸の通知ベル。`notificationCount` > 0 で
+ * ベル右上に赤い未読バッジ(Figma: #ff3434)を表示。
+ *
+ * 下スクロールで隠し、上スワイプで自然に出す(オートハイド)。常時 sticky top-0 で
+ * 残すと下のグラデカードと色が被るため、隠す + 影で背景から分離する。
  */
 export function MobileHeader({
 	className,
@@ -15,10 +21,37 @@ export function MobileHeader({
 }) {
 	const hasNotification = notificationCount > 0;
 	const badgeLabel = notificationCount > 99 ? "99+" : String(notificationCount);
+
+	// スクロール方向でヘッダの表示/非表示を切り替える。
+	const [hidden, setHidden] = useState(false);
+	const lastY = useRef(0);
+
+	useEffect(() => {
+		lastY.current = window.scrollY;
+		function onScroll() {
+			const y = window.scrollY;
+			const delta = y - lastY.current;
+			// 上端付近は常に表示。少し下れば隠し、上スワイプで出す(微小移動は無視)。
+			if (y < 80) {
+				setHidden(false);
+			} else if (delta > 4) {
+				setHidden(true);
+			} else if (delta < -4) {
+				setHidden(false);
+			}
+			lastY.current = y;
+		}
+		window.addEventListener("scroll", onScroll, { passive: true });
+		return () => window.removeEventListener("scroll", onScroll);
+	}, []);
+
 	return (
 		<header
 			className={cn(
-				"sticky top-0 z-10 overflow-hidden rounded-b-[20px] bg-brand-gradient-top text-white",
+				"sticky top-0 z-20 overflow-hidden rounded-b-[20px] bg-brand-gradient-top text-white transition-transform duration-300 ease-out",
+				// 背景(オレンジのグラデカード)と被らないよう影で分離する。
+				"shadow-[0_4px_12px_rgba(77,77,77,0.25)]",
+				hidden ? "-translate-y-full" : "translate-y-0",
 				className,
 			)}
 		>
