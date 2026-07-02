@@ -7,7 +7,7 @@
  */
 import type { TagResponse } from './tagResponse';
 
-export interface PickupUserResponse {
+export interface RecommendUserResponse {
   userId?: number;
   name?: string;
   /** @nullable */
@@ -17,6 +17,8 @@ export interface PickupUserResponse {
      * @nullable
      */
   iconUrl?: string | null;
+  /** ログインユーザーと共通のタグ数 */
+  commonCount?: number;
   /** ログインユーザーと一致するタグの一覧 */
   matchedTags?: TagResponse[];
   /** ログインユーザーと一致しないタグの一覧 */

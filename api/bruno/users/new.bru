@@ -1,0 +1,32 @@
+meta {
+  name: 新着ユーザー一覧取得
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{base_url}}/users/new
+  body: none
+  auth: none
+}
+
+vars:pre-request {
+  base_url: http://localhost:8080
+}
+
+tests {
+  test("ステータスコードが 200 であること", function() {
+    expect(res.status).to.equal(200);
+  });
+  
+  test("users が配列であること", function() {
+    expect(res.body.users).to.be.an("array");
+  });
+  
+  test("各ユーザーに userId と name が含まれること", function() {
+    res.body.users.forEach(function(user) {
+      expect(user.userId).to.be.a("number");
+      expect(user.name).to.be.a("string");
+    });
+  });
+}

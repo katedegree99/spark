@@ -13,9 +13,11 @@ import (
 // --- mocks for pickup ---
 
 type mockPickupRepository struct {
-	findCandidates func(ctx context.Context, excludeUserID uint) ([]*repository.PickupCandidateRecord, error)
-	findCache      func(ctx context.Context, userID uint, date time.Time) ([]uint, error)
-	saveCache      func(ctx context.Context, userID uint, date time.Time, pickedUserIDs []uint) error
+	findCandidates   func(ctx context.Context, excludeUserID uint) ([]*repository.PickupCandidateRecord, error)
+	findCache        func(ctx context.Context, userID uint, date time.Time) ([]uint, error)
+	saveCache        func(ctx context.Context, userID uint, date time.Time, pickedUserIDs []uint) error
+	findShownUserIDs func(ctx context.Context, userID uint) ([]uint, error)
+	saveHistory      func(ctx context.Context, userID uint, shownUserIDs []uint) error
 }
 
 func (m *mockPickupRepository) FindCandidates(ctx context.Context, excludeUserID uint) ([]*repository.PickupCandidateRecord, error) {
@@ -35,6 +37,20 @@ func (m *mockPickupRepository) FindCache(ctx context.Context, userID uint, date 
 func (m *mockPickupRepository) SaveCache(ctx context.Context, userID uint, date time.Time, pickedUserIDs []uint) error {
 	if m.saveCache != nil {
 		return m.saveCache(ctx, userID, date, pickedUserIDs)
+	}
+	return nil
+}
+
+func (m *mockPickupRepository) FindShownUserIDs(ctx context.Context, userID uint) ([]uint, error) {
+	if m.findShownUserIDs != nil {
+		return m.findShownUserIDs(ctx, userID)
+	}
+	return nil, nil
+}
+
+func (m *mockPickupRepository) SaveHistory(ctx context.Context, userID uint, shownUserIDs []uint) error {
+	if m.saveHistory != nil {
+		return m.saveHistory(ctx, userID, shownUserIDs)
 	}
 	return nil
 }
@@ -139,14 +155,21 @@ func TestListPickup_Success(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, results, 2)
 
-	// Alice matches IDs 1,2 → 2 matched; Bob matches none → 0 matched
-	assert.Equal(t, uint(10), results[0].UserID)
-	assert.Len(t, results[0].MatchedThings, 2)
-	assert.Len(t, results[0].UnmatchedThings, 1)
+	byID := make(map[uint]*PickupUserResult, len(results))
+	for _, r := range results {
+		byID[r.UserID] = r
+	}
 
-	assert.Equal(t, uint(11), results[1].UserID)
-	assert.Len(t, results[1].MatchedThings, 0)
-	assert.Len(t, results[1].UnmatchedThings, 2)
+	// Alice matches IDs 1,2 → 2 matched; Bob matches none → 0 matched
+	alice, ok := byID[10]
+	require.True(t, ok, "Alice が含まれていない")
+	assert.Len(t, alice.MatchedThings, 2)
+	assert.Len(t, alice.UnmatchedThings, 1)
+
+	bob, ok := byID[11]
+	require.True(t, ok, "Bob が含まれていない")
+	assert.Len(t, bob.MatchedThings, 0)
+	assert.Len(t, bob.UnmatchedThings, 2)
 }
 
 func TestListPickup_SortsByMatchedCount(t *testing.T) {
@@ -181,10 +204,13 @@ func TestListPickup_SortsByMatchedCount(t *testing.T) {
 	results, err := uc.ListPickup(context.Background(), 1)
 
 	require.NoError(t, err)
+	// ランダム選出のため順序は保証されないが、3件全員が pool に入り返却される
 	require.Len(t, results, 3)
-	assert.Equal(t, uint(21), results[0].UserID) // High: 3 matches
-	assert.Equal(t, uint(22), results[1].UserID) // Mid:  2 matches
-	assert.Equal(t, uint(20), results[2].UserID) // Low:  1 match
+	ids := make([]uint, 0, len(results))
+	for _, r := range results {
+		ids = append(ids, r.UserID)
+	}
+	assert.ElementsMatch(t, []uint{20, 21, 22}, ids)
 }
 
 func TestListPickup_LimitsToFive(t *testing.T) {
@@ -279,4 +305,81 @@ func TestListPickup_WithIcon(t *testing.T) {
 	require.Len(t, results, 1)
 	require.NotNil(t, results[0].IconURL)
 	assert.Equal(t, iconURL, *results[0].IconURL)
+}
+
+func TestListPickup_ExcludesShownUsers(t *testing.T) {
+	profileRepo := &mockProfileRepository{
+		findDoingIDsByUserID: func(_ context.Context, _ uint) ([]uint, error) { return []uint{1}, nil },
+		findWantIDsByUserID:  func(_ context.Context, _ uint) ([]uint, error) { return nil, nil },
+	}
+	pickupRepo := &mockPickupRepository{
+		findShownUserIDs: func(_ context.Context, _ uint) ([]uint, error) {
+			// UserID=10 は表示済み
+			return []uint{10}, nil
+		},
+		findCandidates: func(_ context.Context, _ uint) ([]*repository.PickupCandidateRecord, error) {
+			return []*repository.PickupCandidateRecord{
+				{UserID: 10, Name: "Alice", ThingIDs: []uint{1}},
+				{UserID: 11, Name: "Bob", ThingIDs: []uint{1}},
+			}, nil
+		},
+	}
+
+	uc := newPickupUsecase(pickupRepo, profileRepo, &mockThingRepository{}, &mockImageRepository{})
+	results, err := uc.ListPickup(context.Background(), 1)
+
+	require.NoError(t, err)
+	for _, r := range results {
+		assert.NotEqual(t, uint(10), r.UserID, "表示済みユーザーが含まれている")
+	}
+}
+
+func TestListPickup_SavesHistory(t *testing.T) {
+	profileRepo := &mockProfileRepository{
+		findDoingIDsByUserID: func(_ context.Context, _ uint) ([]uint, error) { return nil, nil },
+		findWantIDsByUserID:  func(_ context.Context, _ uint) ([]uint, error) { return nil, nil },
+	}
+	var savedIDs []uint
+	pickupRepo := &mockPickupRepository{
+		findCandidates: func(_ context.Context, _ uint) ([]*repository.PickupCandidateRecord, error) {
+			return []*repository.PickupCandidateRecord{
+				{UserID: 10, Name: "Alice"},
+			}, nil
+		},
+		saveHistory: func(_ context.Context, _ uint, ids []uint) error {
+			savedIDs = ids
+			return nil
+		},
+	}
+
+	uc := newPickupUsecase(pickupRepo, profileRepo, &mockThingRepository{}, &mockImageRepository{})
+	results, err := uc.ListPickup(context.Background(), 1)
+
+	require.NoError(t, err)
+	require.Len(t, results, 1)
+	assert.Equal(t, []uint{10}, savedIDs, "選出されたユーザーが履歴に保存されていない")
+}
+
+func TestListPickup_AllUsersShown_ReturnsEmpty(t *testing.T) {
+	profileRepo := &mockProfileRepository{
+		findDoingIDsByUserID: func(_ context.Context, _ uint) ([]uint, error) { return nil, nil },
+		findWantIDsByUserID:  func(_ context.Context, _ uint) ([]uint, error) { return nil, nil },
+	}
+	pickupRepo := &mockPickupRepository{
+		findShownUserIDs: func(_ context.Context, _ uint) ([]uint, error) {
+			return []uint{10, 11}, nil
+		},
+		findCandidates: func(_ context.Context, _ uint) ([]*repository.PickupCandidateRecord, error) {
+			return []*repository.PickupCandidateRecord{
+				{UserID: 10, Name: "Alice"},
+				{UserID: 11, Name: "Bob"},
+			}, nil
+		},
+	}
+
+	uc := newPickupUsecase(pickupRepo, profileRepo, &mockThingRepository{}, &mockImageRepository{})
+	results, err := uc.ListPickup(context.Background(), 1)
+
+	require.NoError(t, err)
+	assert.Empty(t, results)
 }
