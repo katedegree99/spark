@@ -12,11 +12,11 @@ export type MiniProfileVM = {
 	iconUrl: string | null;
 };
 
-/** プロフィール未作成(404)等のフォールバック。 */
+/** プロフィール未作成(404)等のフォールバック。アイコンはデフォルト表示に委ねる。 */
 const GUEST_PROFILE: MiniProfileVM = {
 	name: "ゲスト",
 	handle: null,
-	iconUrl: resolveAvatarUrl(null, 0),
+	iconUrl: null,
 };
 
 /**

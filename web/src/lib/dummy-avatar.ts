@@ -2,9 +2,9 @@
  * 開発用のダミーアバター解決。
  *
  * mock サーバー(Redocly)は例データとして無効な `pub-xxx.r2.dev` の URL を返すため、
- * そのままだと画像が壊れる。iconUrl が無効/未設定のときは Unsplash のダミー
- * ポートレートにフォールバックして見た目を保つ。`seed`(userId 等)で 1 ユーザー
- * 1 画像に固定し、一覧でも顔がばらつくようにする。
+ * そのままだと画像が壊れる。この「壊れ URL」のときだけ Unsplash のダミー
+ * ポートレートに置き換えて見た目を保つ(`seed`=userId 等で 1 ユーザー 1 画像に固定)。
+ * 真に未設定(null/空)のときは null を返し、Avatar のデフォルトアイコン表示に委ねる。
  *
  * TODO(mock): backend が本番のプロフィール画像 URL を返すようになったら削除する。
  */
@@ -39,12 +39,14 @@ function isUsableIconUrl(url: string | null | undefined): url is string {
 }
 
 /**
- * 使える iconUrl はそのまま返し、無効/未設定なら `seed` から決まるダミー画像を返す。
+ * 使える iconUrl はそのまま、mock の壊れ URL は `seed` から決まるダミー画像に置換、
+ * 未設定(null/空)は null を返す(Avatar 側でデフォルトアイコンにフォールバック)。
  */
 export function resolveAvatarUrl(
 	iconUrl: string | null | undefined,
 	seed: number,
-): string {
+): string | null {
+	if (iconUrl == null || iconUrl === "") return null;
 	if (isUsableIconUrl(iconUrl)) return iconUrl;
 	const i =
 		((Math.trunc(seed) % DUMMY_AVATARS.length) + DUMMY_AVATARS.length) %
