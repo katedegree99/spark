@@ -43,8 +43,9 @@
 		var(--font-roboto), "SF Pro Text", -apple-system, BlinkMacSystemFont,
 		"Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", Meiryo,
 		sans-serif;
-	/* Figma 数字用「DIN Bold」の再現(OSS D-DIN)。`font-din` で利用する。 */
-	--font-din: var(--font-d-din), var(--font-roboto), sans-serif;
+	/* Figma 数字用「DIN Bold」の代替(Google Fonts の Barlow 700)。
+	   `font-din` で利用する(名前は Figma のデザイン意図に合わせて維持)。 */
+	--font-din: var(--font-barlow), var(--font-roboto), sans-serif;
 
 	/* --- Design tokens → utilities ---
      spacing / font-size / font-weight / radius(12px=rounded-xl) は

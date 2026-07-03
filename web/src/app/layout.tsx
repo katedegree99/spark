@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import { Roboto } from "next/font/google";
-import localFont from "next/font/local";
+import { Barlow, Roboto } from "next/font/google";
 import { IconGradientDefs } from "@/components/icons/icon-gradient-defs";
 import "./globals.css";
 
@@ -11,12 +10,11 @@ const roboto = Roboto({
 	display: "swap",
 });
 
-// Figma の数字用フォント「DIN Bold」を、OSS の DIN 復刻フォント D-DIN(SIL OFL)で
-// 再現する。Google Fonts に DIN は無いため self-host(next/font/local)。
-// ライセンス: src/app/fonts/D-DIN-OFL.txt
-const dDin = localFont({
-	src: "./fonts/D-DIN-Bold.woff2",
-	variable: "--font-d-din",
+// Figma の数字用フォント「DIN Bold」の代替。DIN は商用のため Google Fonts に
+// 無く、DIN 系グロテスクの Barlow(700)で近似する(利用は `font-din` 経由)。
+const barlow = Barlow({
+	variable: "--font-barlow",
+	subsets: ["latin"],
 	weight: "700",
 	display: "swap",
 });
@@ -34,7 +32,7 @@ export default function RootLayout({
 	return (
 		<html
 			lang="ja"
-			className={`${roboto.variable} ${dDin.variable} h-full antialiased`}
+			className={`${roboto.variable} ${barlow.variable} h-full antialiased`}
 		>
 			<body className="flex min-h-full flex-col">
 				<IconGradientDefs />
