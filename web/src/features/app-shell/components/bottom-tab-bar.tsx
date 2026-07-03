@@ -55,7 +55,10 @@ function TabItem({ item, pathname }: { item: NavItem; pathname: string }) {
 /**
  * SP 下部固定タブバー(Client、Figma 準拠)。
  * 角丸の上端 + 上向きの影。中央に MATCH の円ボタンを白リングで浮かせる。
- * `safe-area-inset-bottom` でホームバー領域を避ける。
+ *
+ * ホームバー回避: `env(safe-area-inset-bottom)` は viewport-fit=cover を
+ * 設定したときのみ非 0 になる。現状 cover は未設定のためブラウザ既定の
+ * inset に任せており、env() は将来 cover を導入したときの保険として残す。
  */
 export function BottomTabBar({ className }: { className?: string }) {
 	const pathname = usePathname();
@@ -92,13 +95,14 @@ export function BottomTabBar({ className }: { className?: string }) {
 				>
 					<span
 						className="flex size-full flex-col items-center justify-center rounded-full"
+						// MATCH ボタン固有の角度(111.24°)のため @utility 化せずインラインで指定。
+						// ストップ列は共通トークン(--brand-stops)を参照する。
 						style={{
-							backgroundImage:
-								"linear-gradient(111.24deg, var(--brand-yellow) 0.98%, var(--brand-orange) 50%, var(--brand-red) 99.02%)",
+							backgroundImage: "linear-gradient(111.24deg, var(--brand-stops))",
 						}}
 					>
 						<span className="font-[900] text-base text-white italic">
-							MACTH
+							MATCH
 						</span>
 					</span>
 				</button>

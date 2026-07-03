@@ -24,12 +24,14 @@ export function SectionHeader({ title, moreHref }: SectionHeaderProps) {
 					<ChevronRight className="size-4" aria-hidden="true" />
 				</Link>
 			) : (
+				// 遷移先未実装の間は視覚的な装飾として残しつつ、機能しないテキストを
+				// 支援技術に読ませない(span への aria-disabled は無意味なため aria-hidden)。
 				<span
-					aria-disabled="true"
+					aria-hidden="true"
 					className="pointer-events-none inline-flex items-center gap-0.5 text-secondary text-sm opacity-60"
 				>
 					もっとみる
-					<ChevronRight className="size-4" aria-hidden="true" />
+					<ChevronRight className="size-4" />
 				</span>
 			)}
 		</div>

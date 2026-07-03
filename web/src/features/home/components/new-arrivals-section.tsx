@@ -1,3 +1,4 @@
+import { ScrollEdgeFade } from "@/components/ui/scroll-edge-fade";
 import { SectionHeader } from "@/components/ui/section-header";
 import type { NewArrivalVM } from "../types";
 import { NewArrivalItem } from "./new-arrival-item";
@@ -15,13 +16,12 @@ export function NewArrivalsSection({ users }: { users: NewArrivalVM[] }) {
 			{/* スクロール領域はコンテナ余白を打ち消して画面端まで全幅化し、
 			    左右に白グラデを重ねて端で自然にフェードさせる。 */}
 			<div className="relative -mx-4 md:-mx-10">
-				<ul className="flex gap-1 overflow-x-auto px-4 pb-1 md:px-10 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+				<ul className="scrollbar-none flex gap-1 overflow-x-auto px-4 pb-1 md:px-10">
 					{users.map((user) => (
 						<NewArrivalItem key={user.userId} user={user} />
 					))}
 				</ul>
-				<div className="pointer-events-none absolute inset-y-0 left-0 w-6 bg-gradient-to-r from-white to-transparent" />
-				<div className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-white to-transparent" />
+				<ScrollEdgeFade />
 			</div>
 		</section>
 	);

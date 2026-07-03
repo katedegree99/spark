@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { ScrollEdgeFade } from "@/components/ui/scroll-edge-fade";
 import { cn } from "@/utils/cn";
 import type { PickupCardVM } from "../types";
 import { PickupCard } from "./pickup-card";
@@ -86,7 +87,9 @@ export function PickupCarousel({ cards }: { cards: PickupCardVM[] }) {
 	}
 
 	return (
-		<section className="flex flex-col gap-3" aria-label="今日のピックアップ">
+		// 見出し(ランドマーク名)は親 PickupSection の h2 が担うため、ここは
+		// aria-label 付き section にせず素の div にする(同名ラベルの二重読み上げ防止)。
+		<div className="flex flex-col gap-3">
 			{/* full-bleed(-mx)でスクロール領域を広げ、px でカードを中央寄せする。
 			    px と gap の差が両隣カードの覗き量になる(w-[84vw] + px-[8vw])。
 			    左右に白グラデを重ねて端で自然にフェードさせる(新着セクションと同様)。 */}
@@ -94,7 +97,7 @@ export function PickupCarousel({ cards }: { cards: PickupCardVM[] }) {
 				<ul
 					ref={scrollerRef}
 					onScroll={handleScroll}
-					className="flex items-end snap-x snap-mandatory gap-2 overflow-x-auto scroll-smooth scroll-px-[8vw] px-[8vw] pb-1 md:gap-6 md:scroll-px-10 md:px-10 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+					className="scrollbar-none flex items-end snap-x snap-mandatory gap-2 overflow-x-auto scroll-smooth scroll-px-[8vw] px-[8vw] pb-1 md:gap-6 md:scroll-px-10 md:px-10"
 				>
 					{cards.map((card, index) => (
 						<li
@@ -108,8 +111,7 @@ export function PickupCarousel({ cards }: { cards: PickupCardVM[] }) {
 						</li>
 					))}
 				</ul>
-				<div className="pointer-events-none absolute inset-y-0 left-0 w-6 bg-gradient-to-r from-white to-transparent" />
-				<div className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-white to-transparent" />
+				<ScrollEdgeFade />
 			</div>
 			{cards.length > 1 ? (
 				<div className="flex items-center justify-center gap-1.5 md:hidden">
@@ -128,6 +130,6 @@ export function PickupCarousel({ cards }: { cards: PickupCardVM[] }) {
 					))}
 				</div>
 			) : null}
-		</section>
+		</div>
 	);
 }

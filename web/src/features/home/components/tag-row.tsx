@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { TagChip } from "@/components/ui/tag-chip";
+import { cn } from "@/utils/cn";
 import type { TagVM } from "../types";
 
 const GAP = 8; // gap-2 (px)
@@ -25,6 +26,10 @@ export function TagRow({ tags }: { tags: TagVM[] }) {
 	const measureRef = useRef<HTMLDivElement>(null);
 	const ellipsisRef = useRef<HTMLSpanElement>(null);
 	const [visibleCount, setVisibleCount] = useState(tags.length);
+	// 計測前の初回ペイントでは「全タグが並び末尾チップが途中で切れた状態」が
+	// 露出してちらつくため、件数が確定するまで表示行を invisible にする
+	// (visibility なので行の高さは確保され、レイアウトシフトは起きない)。
+	const [ready, setReady] = useState(false);
 
 	useEffect(() => {
 		const container = containerRef.current;
@@ -53,6 +58,7 @@ export function TagRow({ tags }: { tags: TagVM[] }) {
 				}
 			}
 			setVisibleCount(count);
+			setReady(true);
 		};
 
 		compute();
@@ -90,7 +96,10 @@ export function TagRow({ tags }: { tags: TagVM[] }) {
 				</span>
 			</div>
 			{/* 表示行: 入りきるタグだけ + 余れば末尾に「...」。 */}
-			<div ref={containerRef} className="flex items-center gap-2">
+			<div
+				ref={containerRef}
+				className={cn("flex items-center gap-2", !ready && "invisible")}
+			>
 				{tags.slice(0, visibleCount).map((tag) => (
 					<TagChip
 						key={`${tag.matched}-${tag.id}`}

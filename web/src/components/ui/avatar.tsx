@@ -27,6 +27,9 @@ function initial(name: string): string {
  * 画像が無いときは表示名のイニシャルにフォールバックする。
  */
 export function Avatar({ src, name, size = "md", className }: AvatarProps) {
+	// name が空(API 由来で `?? ""` になりうる)のとき、アクセシブル名が
+	// 空文字の img ロールにならないよう代替ラベルにフォールバックする。
+	const label = name.trim() || "ユーザー";
 	return (
 		<div
 			className={cn(
@@ -34,11 +37,11 @@ export function Avatar({ src, name, size = "md", className }: AvatarProps) {
 				SIZE_CLASSES[size],
 				className,
 			)}
-			{...(src ? {} : { role: "img", "aria-label": name })}
+			{...(src ? {} : { role: "img", "aria-label": label })}
 		>
 			{src ? (
 				// biome-ignore lint/performance/noImgElement: remotePatterns 未設定のため next/image は使わない
-				<img src={src} alt={name} className="size-full object-cover" />
+				<img src={src} alt={label} className="size-full object-cover" />
 			) : (
 				<span aria-hidden="true">{initial(name)}</span>
 			)}

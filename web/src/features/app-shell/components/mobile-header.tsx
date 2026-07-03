@@ -27,7 +27,6 @@ export function MobileHeader({
 	const lastY = useRef(0);
 
 	useEffect(() => {
-		lastY.current = window.scrollY;
 		function onScroll() {
 			const y = window.scrollY;
 			const delta = y - lastY.current;
@@ -41,8 +40,32 @@ export function MobileHeader({
 			}
 			lastY.current = y;
 		}
-		window.addEventListener("scroll", onScroll, { passive: true });
-		return () => window.removeEventListener("scroll", onScroll);
+
+		// ヘッダは PC(md 以上)では `md:hidden` で非表示だがマウントはされるため、
+		// scroll 購読は SP 幅のときだけ張る(ブレークポイント跨ぎで張り替える)。
+		const mq = window.matchMedia("(min-width: 768px)");
+		let subscribed = false;
+		function sync() {
+			if (mq.matches) {
+				if (subscribed) {
+					window.removeEventListener("scroll", onScroll);
+					subscribed = false;
+				}
+				setHidden(false);
+				return;
+			}
+			if (!subscribed) {
+				lastY.current = window.scrollY;
+				window.addEventListener("scroll", onScroll, { passive: true });
+				subscribed = true;
+			}
+		}
+		sync();
+		mq.addEventListener("change", sync);
+		return () => {
+			mq.removeEventListener("change", sync);
+			if (subscribed) window.removeEventListener("scroll", onScroll);
+		};
 	}, []);
 
 	return (

@@ -13,7 +13,7 @@ export function NewArrivalItem({ user }: { user: NewArrivalVM }) {
 				size="lg"
 				className="border-2 border-brand-gradient"
 			/>
-			<span className="w-full truncate text-center font-medium text-[#4d4d4d] text-sm">
+			<span className="w-full truncate text-center font-medium text-ink-light text-sm">
 				{user.name}
 			</span>
 		</li>
