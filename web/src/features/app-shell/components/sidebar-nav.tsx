@@ -23,6 +23,7 @@ export function SidebarNav() {
 							href={enabled ? href : "#"}
 							aria-disabled={!enabled || undefined}
 							aria-current={active ? "page" : undefined}
+							aria-label={label}
 							tabIndex={enabled ? undefined : -1}
 							className={cn(
 								"flex items-center gap-5 rounded-xl p-3 font-bold text-xl tracking-wide",
@@ -30,17 +31,20 @@ export function SidebarNav() {
 								!enabled && "pointer-events-none opacity-60",
 							)}
 						>
+							{/* 40px 描画では viewBox 拡大で線が太く見えるため細めに指定する */}
 							<Icon
-								className="size-10 shrink-0 p-1.5"
+								className="size-10 shrink-0"
+								strokeWidth={1.5}
 								aria-hidden="true"
 								{...(active ? { stroke: "url(#icon-gradient)" } : {})}
 							/>
+							{/* lg 未満はアイコンのみ表示(ラベルは aria-label が担う) */}
 							{active ? (
-								<span className="bg-brand-gradient bg-clip-text text-transparent">
+								<span className="hidden bg-brand-gradient bg-clip-text text-transparent lg:inline">
 									{label}
 								</span>
 							) : (
-								<span>{label}</span>
+								<span className="hidden lg:inline">{label}</span>
 							)}
 						</Link>
 					</li>
