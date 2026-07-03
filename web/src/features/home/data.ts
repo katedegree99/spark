@@ -1,22 +1,25 @@
 /**
  * ホーム画面のデータアクセス層。Server Component からのみ呼ぶ。
  *
- * 公開関数のシグネチャは将来も不変に保つ(API 化時に中身だけ差し替える)。
- * 「今日のピックアップ」は実 API `GET /users/pickup` を叩く。新着・おすすめは
- * API 未実装のため当面 `fixtures` を返す。
+ * 3 セクションとも mock/実 API から取得する:
+ *   今日のピックアップ → GET /users/pickup
+ *   新着             → GET /users/new
+ *   おすすめ          → GET /users/recommend
+ * アバター URL が無効(mock の pub-xxx placeholder)/未設定のときは
+ * `resolveAvatarUrl` でダミー画像にフォールバックする。
  */
 import "server-only";
 import { apiFetch } from "@/lib/api/fetcher";
 import type {
+	NewUserResponse,
+	NewUsersResponse,
 	PickupUserResponse,
 	PickupUsersResponse,
-	ThingResponse,
+	RecommendUserResponse,
+	RecommendUsersResponse,
+	TagResponse,
 } from "@/lib/api/generated/model";
-import {
-	newArrivalsFixture,
-	pickupCardsFixture,
-	recommendedUsersFixture,
-} from "./fixtures";
+import { resolveAvatarUrl } from "@/lib/dummy-avatar";
 import type {
 	NewArrivalVM,
 	PickupCardVM,
@@ -29,15 +32,12 @@ export type PickupError = { error: true };
 
 /** `matched`/`unmatched` のタグ群を VM 配列へ。id/name 欠落要素は除外する。 */
 function toTagVMs(
-	matchedTags?: ThingResponse[],
-	unmatchedTags?: ThingResponse[],
+	matchedTags?: TagResponse[],
+	unmatchedTags?: TagResponse[],
 ): TagVM[] {
-	const toVMs = (
-		tags: ThingResponse[] | undefined,
-		matched: boolean,
-	): TagVM[] =>
+	const toVMs = (tags: TagResponse[] | undefined, matched: boolean): TagVM[] =>
 		(tags ?? [])
-			.filter((t): t is ThingResponse & { id: number; name: string } => {
+			.filter((t): t is TagResponse & { id: number; name: string } => {
 				return t.id != null && t.name != null;
 			})
 			.map((t) => ({ id: t.id, name: t.name, matched }));
@@ -48,13 +48,44 @@ function toTagVMs(
 /** ピックアップユーザーを VM に変換する。userId 欠落要素は除外(null を返す)。 */
 function toPickupCardVM(user: PickupUserResponse): PickupCardVM | null {
 	if (user.userId == null) return null;
+	const tags = toTagVMs(user.matchedTags, user.unmatchedTags);
 	return {
 		userId: user.userId,
 		name: user.name ?? "",
 		bio: user.bio ?? "",
-		iconUrl: user.iconUrl ?? null,
-		matchedCount: user.matchedTags?.length ?? 0,
-		tags: toTagVMs(user.matchedTags, user.unmatchedTags),
+		iconUrl: resolveAvatarUrl(user.iconUrl, user.userId),
+		// 「共通のタグが N 個」の N が表示する filled タグ数とズレないよう、
+		// id/name 欠落を除外したフィルタ後の VM から数える。
+		matchedCount: tags.filter((t) => t.matched).length,
+		tags,
+	};
+}
+
+/** 新着ユーザーを VM に変換する。userId 欠落要素は除外(null を返す)。 */
+function toNewArrivalVM(user: NewUserResponse): NewArrivalVM | null {
+	if (user.userId == null) return null;
+	return {
+		userId: user.userId,
+		name: user.name ?? "",
+		iconUrl: resolveAvatarUrl(user.iconUrl, user.userId),
+	};
+}
+
+/** おすすめユーザーを VM に変換する。userId 欠落要素は除外(null を返す)。 */
+function toRecommendedUserVM(
+	user: RecommendUserResponse,
+): RecommendedUserVM | null {
+	if (user.userId == null) return null;
+	const tags = toTagVMs(user.matchedTags, user.unmatchedTags);
+	return {
+		userId: user.userId,
+		name: user.name ?? "",
+		bio: user.bio ?? "",
+		iconUrl: resolveAvatarUrl(user.iconUrl, user.userId),
+		// commonCount 優先。無ければフィルタ後の matched タグ数で代替する
+		// (未フィルタの length だと表示 filled タグ数とズレうるため)。
+		matchedCount: user.commonCount ?? tags.filter((t) => t.matched).length,
+		tags,
 	};
 }
 
@@ -67,29 +98,37 @@ export async function getPickupUsers(): Promise<PickupCardVM[] | PickupError> {
 	const res = await apiFetch<PickupUsersResponse>("/users/pickup", undefined, {
 		auth: true,
 	});
-	// TODO(api): backend が本番データを返せるようになったら、この dummy フォールバックを外す。
-	if (!res.ok) return pickupCardsFixture;
-
-	const cards = (res.data.users ?? [])
+	if (!res.ok) return { error: true };
+	// res.data は 2xx でも JSON パース失敗時に null になりうるため optional chain で守る。
+	return (res.data?.users ?? [])
 		.map(toPickupCardVM)
 		.filter((c): c is PickupCardVM => c !== null);
-
-	// mock サーバーはアバター URL が無効(pub-xxx.r2.dev)な単一の例題データしか
-	// 返さないため、実データが揃うまでは Unsplash 画像入りのダミーで見た目を確認する。
-	const looksLikeMock =
-		cards.length <= 1 &&
-		cards.every((c) => c.iconUrl?.includes("pub-xxx") ?? false);
-	return cards.length > 0 && !looksLikeMock ? cards : pickupCardsFixture;
 }
 
-/** 新着ユーザーを取得する。 */
-// TODO(api): GET /users/new-arrivals 実装後に apiFetch へ差し替える。
+/**
+ * 新着ユーザーを取得する。取得失敗時は空配列(セクション非表示)にして degrade する。
+ */
 export async function getNewArrivals(): Promise<NewArrivalVM[]> {
-	return newArrivalsFixture;
+	const res = await apiFetch<NewUsersResponse>("/users/new", undefined, {
+		auth: true,
+	});
+	if (!res.ok) return [];
+	return (res.data?.users ?? [])
+		.map(toNewArrivalVM)
+		.filter((u): u is NewArrivalVM => u !== null);
 }
 
-/** おすすめユーザーを取得する。 */
-// TODO(api): GET /users/recommended 実装後に apiFetch へ差し替える。
+/**
+ * おすすめユーザーを取得する。取得失敗時は空配列(セクション非表示)にして degrade する。
+ */
 export async function getRecommendedUsers(): Promise<RecommendedUserVM[]> {
-	return recommendedUsersFixture;
+	const res = await apiFetch<RecommendUsersResponse>(
+		"/users/recommend",
+		undefined,
+		{ auth: true },
+	);
+	if (!res.ok) return [];
+	return (res.data?.users ?? [])
+		.map(toRecommendedUserVM)
+		.filter((u): u is RecommendedUserVM => u !== null);
 }

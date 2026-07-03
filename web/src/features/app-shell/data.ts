@@ -4,6 +4,7 @@
 import "server-only";
 import { apiFetch } from "@/lib/api/fetcher";
 import type { ProfileResponse } from "@/lib/api/generated/model";
+import { resolveAvatarUrl } from "@/lib/dummy-avatar";
 
 export type MiniProfileVM = {
 	name: string;
@@ -11,15 +12,11 @@ export type MiniProfileVM = {
 	iconUrl: string | null;
 };
 
-// TODO(mock): 開発用のダミーアバター。API がプロフィール画像を返すようになったら外す。
-const DUMMY_AVATAR =
-	"https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200&h=200&fit=crop&crop=faces&auto=format&q=80";
-
 /** プロフィール未作成(404)等のフォールバック。 */
 const GUEST_PROFILE: MiniProfileVM = {
 	name: "ゲスト",
 	handle: null,
-	iconUrl: DUMMY_AVATAR,
+	iconUrl: resolveAvatarUrl(null, 0),
 };
 
 /**
@@ -31,7 +28,8 @@ export async function getMyMiniProfile(): Promise<MiniProfileVM> {
 	const res = await apiFetch<ProfileResponse>("/profiles/me", undefined, {
 		auth: true,
 	});
-	if (!res.ok) return GUEST_PROFILE;
+	// res.data は 2xx でも JSON パース失敗時に null になりうる。
+	if (!res.ok || res.data == null) return GUEST_PROFILE;
 
 	const profile = res.data;
 	return {
@@ -39,6 +37,6 @@ export async function getMyMiniProfile(): Promise<MiniProfileVM> {
 		// スキーマ上ハンドル文字列は無く ID は userId(数値)のみ。Figma の「＠〜」表記に
 		// 合わせて ＠userId を表示する(未設定時は非表示)。
 		handle: profile.userId != null ? `＠${profile.userId}` : null,
-		iconUrl: profile.iconImage?.url ?? DUMMY_AVATAR,
+		iconUrl: resolveAvatarUrl(profile.iconImage?.url, profile.userId ?? 0),
 	};
 }
