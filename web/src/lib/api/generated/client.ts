@@ -7,6 +7,7 @@
  */
 import useSwr from 'swr';
 import type {
+  Arguments,
   Key,
   SWRConfiguration
 } from 'swr';
@@ -21,6 +22,7 @@ import type {
   ErrorResponse,
   GoogleLoginRequest,
   ImageResponse,
+  InterestResponse,
   ListThingsParams,
   ListUsersParams,
   LoginRequest,
@@ -39,6 +41,7 @@ import type {
   ThingsResponse,
   UnauthorizedResponse,
   UploadImageBody,
+  UserDetailResponse,
   ValidationErrorResponse
 } from './model';
 
@@ -1060,6 +1063,180 @@ export const useListRecommendUsers = <TError = Promise<UnauthorizedResponse>>(
   const swrFn = () => listRecommendUsers(fetchOptions)
 
   const query = useSwr<Awaited<ReturnType<typeof swrFn>>, TError>(swrKey, swrFn, swrOptions)
+
+  return {
+    swrKey,
+    ...query
+  }
+}
+
+export type getUserResponse200 = {
+  data: UserDetailResponse
+  status: 200
+}
+
+export type getUserResponse401 = {
+  data: UnauthorizedResponse
+  status: 401
+}
+
+export type getUserResponse404 = {
+  data: ErrorResponse
+  status: 404
+}
+
+export type getUserResponseSuccess = (getUserResponse200) & {
+  headers: Headers;
+};
+export type getUserResponseError = (getUserResponse401 | getUserResponse404) & {
+  headers: Headers;
+};
+
+export type getUserResponse = (getUserResponseSuccess | getUserResponseError)
+
+export const getGetUserUrl = (userId: number,) => {
+
+
+
+
+  return `/users/${userId}`
+}
+
+/**
+ * 指定したユーザーのプロフィール詳細を返す。
+ * ログインユーザーとのタグ一致情報と、既に気になるを送信済みかどうかを含む。
+ * @summary ユーザー詳細を取得する
+ */
+export const getUser = async (userId: number, options?: RequestInit): Promise<getUserResponse> => {
+
+  const res = await fetch(getGetUserUrl(userId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: getUserResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as getUserResponse
+}
+
+
+
+
+export const getGetUserKey = (userId: number,) => [`/users/${userId}`] as const;
+
+export type GetUserQueryResult = NonNullable<Awaited<ReturnType<typeof getUser>>>
+
+/**
+ * @summary ユーザー詳細を取得する
+ */
+export const useGetUser = <TError = Promise<UnauthorizedResponse | ErrorResponse>>(
+  userId: number, options?: { swr?:SWRConfiguration<Awaited<ReturnType<typeof getUser>>, TError> & { swrKey?: Key, enabled?: boolean }, fetch?: RequestInit }
+) => {
+  const {swr: swrOptions, fetch: fetchOptions} = options ?? {}
+
+  const isEnabled = swrOptions?.enabled !== false && userId !== null && userId !== undefined
+  const swrKey = swrOptions?.swrKey ?? (() => isEnabled ? getGetUserKey(userId) : null);
+  const swrFn = () => getUser(userId, fetchOptions)
+
+  const query = useSwr<Awaited<ReturnType<typeof swrFn>>, TError>(swrKey, swrFn, swrOptions)
+
+  return {
+    swrKey,
+    ...query
+  }
+}
+
+export type sendInterestResponse200 = {
+  data: InterestResponse
+  status: 200
+}
+
+export type sendInterestResponse401 = {
+  data: UnauthorizedResponse
+  status: 401
+}
+
+export type sendInterestResponse404 = {
+  data: ErrorResponse
+  status: 404
+}
+
+export type sendInterestResponse409 = {
+  data: ErrorResponse
+  status: 409
+}
+
+export type sendInterestResponseSuccess = (sendInterestResponse200) & {
+  headers: Headers;
+};
+export type sendInterestResponseError = (sendInterestResponse401 | sendInterestResponse404 | sendInterestResponse409) & {
+  headers: Headers;
+};
+
+export type sendInterestResponse = (sendInterestResponseSuccess | sendInterestResponseError)
+
+export const getSendInterestUrl = (userId: number,) => {
+
+
+
+
+  return `/users/${userId}/interests`
+}
+
+/**
+ * 指定したユーザーに「気になる」を送る。
+ * 相手もすでに自分に気になるを送っていた場合は `matched` が true になる。
+ * @summary 気になるを送る
+ */
+export const sendInterest = async (userId: number, options?: RequestInit): Promise<sendInterestResponse> => {
+
+  const res = await fetch(getSendInterestUrl(userId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: sendInterestResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as sendInterestResponse
+}
+
+
+
+
+export const getSendInterestMutationFetcher = (userId: number, options?: RequestInit) => {
+  return (_: Key, __: { arg: Arguments }) => {
+    return sendInterest(userId, options);
+  }
+}
+export const getSendInterestMutationKey = (userId: number,) => [`/users/${userId}/interests`] as const;
+
+export type SendInterestMutationResult = NonNullable<Awaited<ReturnType<typeof sendInterest>>>
+
+/**
+ * @summary 気になるを送る
+ */
+export const useSendInterest = <TError = Promise<UnauthorizedResponse | ErrorResponse>>(
+  userId: number, options?: { swr?:SWRMutationConfiguration<Awaited<ReturnType<typeof sendInterest>>, TError, Key, Arguments, Awaited<ReturnType<typeof sendInterest>>> & { swrKey?: string }, fetch?: RequestInit}
+) => {
+
+  const {swr: swrOptions, fetch: fetchOptions} = options ?? {}
+
+  const swrKey = swrOptions?.swrKey ?? getSendInterestMutationKey(userId);
+  const swrFn = getSendInterestMutationFetcher(userId, fetchOptions);
+
+  const query = useSWRMutation(swrKey, swrFn, swrOptions)
 
   return {
     swrKey,

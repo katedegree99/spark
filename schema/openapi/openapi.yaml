@@ -833,10 +833,6 @@ components:
           nullable: true
           description: プロフィールアイコン画像の URL
           example: https://pub-xxx.r2.dev/icon/abc123.jpg
-        commonCount:
-          type: integer
-          description: ログインユーザーと共通のタグ数
-          example: 3
         matchedTags:
           type: array
           items:

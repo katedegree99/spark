@@ -88,6 +88,12 @@ type ImageResponse struct {
 	Url       *string    `json:"url,omitempty"`
 }
 
+// InterestResponse defines model for InterestResponse.
+type InterestResponse struct {
+	// Matched 相互に気になるが成立してマッチになったかどうか
+	Matched *bool `json:"matched,omitempty"`
+}
+
 // LoginRequest defines model for LoginRequest.
 type LoginRequest struct {
 	Email    openapi_types.Email `json:"email"`
@@ -246,6 +252,25 @@ type ThingsResponse struct {
 	Things *[]ThingResponse `json:"things,omitempty"`
 }
 
+// UserDetailResponse defines model for UserDetailResponse.
+type UserDetailResponse struct {
+	Bio *string `json:"bio,omitempty"`
+
+	// IconUrl プロフィールアイコン画像の URL
+	IconUrl *string `json:"iconUrl,omitempty"`
+
+	// IsInterested ログインユーザーがすでに気になるを送っているかどうか
+	IsInterested *bool `json:"isInterested,omitempty"`
+
+	// MatchedTags ログインユーザーと一致するタグの一覧
+	MatchedTags *[]TagResponse `json:"matchedTags,omitempty"`
+	Name        *string        `json:"name,omitempty"`
+
+	// UnmatchedTags ログインユーザーと一致しないタグの一覧
+	UnmatchedTags *[]TagResponse `json:"unmatchedTags,omitempty"`
+	UserId        *int           `json:"userId,omitempty"`
+}
+
 // ValidationErrorResponse defines model for ValidationErrorResponse.
 type ValidationErrorResponse struct {
 	Code   string `json:"code"`
@@ -378,6 +403,12 @@ type ServerInterface interface {
 	// おすすめユーザー一覧を取得する
 	// (GET /users/recommend)
 	ListRecommendUsers(ctx echo.Context) error
+	// ユーザー詳細を取得する
+	// (GET /users/{userId})
+	GetUser(ctx echo.Context, userId int) error
+	// 気になるを送る
+	// (POST /users/{userId}/interests)
+	SendInterest(ctx echo.Context, userId int) error
 }
 
 // ServerInterfaceWrapper converts echo contexts to parameters.
@@ -588,6 +619,42 @@ func (w *ServerInterfaceWrapper) ListRecommendUsers(ctx echo.Context) error {
 	return err
 }
 
+// GetUser converts echo context to params.
+func (w *ServerInterfaceWrapper) GetUser(ctx echo.Context) error {
+	var err error
+	// ------------- Path parameter "userId" -------------
+	var userId int
+
+	err = runtime.BindStyledParameterWithOptions("simple", "userId", ctx.Param("userId"), &userId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: ""})
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter userId: %s", err))
+	}
+
+	ctx.Set(string(BearerAuthScopes), []string{})
+
+	// Invoke the callback with all the unmarshaled arguments
+	err = w.Handler.GetUser(ctx, userId)
+	return err
+}
+
+// SendInterest converts echo context to params.
+func (w *ServerInterfaceWrapper) SendInterest(ctx echo.Context) error {
+	var err error
+	// ------------- Path parameter "userId" -------------
+	var userId int
+
+	err = runtime.BindStyledParameterWithOptions("simple", "userId", ctx.Param("userId"), &userId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "integer", Format: ""})
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter userId: %s", err))
+	}
+
+	ctx.Set(string(BearerAuthScopes), []string{})
+
+	// Invoke the callback with all the unmarshaled arguments
+	err = w.Handler.SendInterest(ctx, userId)
+	return err
+}
+
 // This is a simple interface which specifies echo.Route addition functions which
 // are present on both echo.Echo and echo.Group, since we want to allow using
 // either of them for path registration
@@ -651,6 +718,8 @@ func RegisterHandlersWithOptions(router EchoRouter, si ServerInterface, options 
 	router.GET(options.BaseURL+"/users/new", wrapper.ListNewUsers, options.OperationMiddlewares["listNewUsers"]...)
 	router.GET(options.BaseURL+"/users/pickup", wrapper.ListPickupUsers, options.OperationMiddlewares["listPickupUsers"]...)
 	router.GET(options.BaseURL+"/users/recommend", wrapper.ListRecommendUsers, options.OperationMiddlewares["listRecommendUsers"]...)
+	router.GET(options.BaseURL+"/users/:userId", wrapper.GetUser, options.OperationMiddlewares["getUser"]...)
+	router.POST(options.BaseURL+"/users/:userId/interests", wrapper.SendInterest, options.OperationMiddlewares["sendInterest"]...)
 
 }
 
@@ -1392,6 +1461,120 @@ func (response ListRecommendUsers401JSONResponse) VisitListRecommendUsersRespons
 	return err
 }
 
+type GetUserRequestObject struct {
+	UserId int `json:"userId"`
+}
+
+type GetUserResponseObject interface {
+	VisitGetUserResponse(w http.ResponseWriter) error
+}
+
+type GetUser200JSONResponse UserDetailResponse
+
+func (response GetUser200JSONResponse) VisitGetUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetUser401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response GetUser401JSONResponse) VisitGetUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type GetUser404JSONResponse ErrorResponse
+
+func (response GetUser404JSONResponse) VisitGetUserResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SendInterestRequestObject struct {
+	UserId int `json:"userId"`
+}
+
+type SendInterestResponseObject interface {
+	VisitSendInterestResponse(w http.ResponseWriter) error
+}
+
+type SendInterest200JSONResponse InterestResponse
+
+func (response SendInterest200JSONResponse) VisitSendInterestResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SendInterest401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response SendInterest401JSONResponse) VisitSendInterestResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SendInterest404JSONResponse ErrorResponse
+
+func (response SendInterest404JSONResponse) VisitSendInterestResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SendInterest409JSONResponse ErrorResponse
+
+func (response SendInterest409JSONResponse) VisitSendInterestResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(409)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 // StrictServerInterface represents all server handlers.
 type StrictServerInterface interface {
 	// GoogleでログインまたはID連携
@@ -1442,6 +1625,12 @@ type StrictServerInterface interface {
 	// おすすめユーザー一覧を取得する
 	// (GET /users/recommend)
 	ListRecommendUsers(ctx context.Context, request ListRecommendUsersRequestObject) (ListRecommendUsersResponseObject, error)
+	// ユーザー詳細を取得する
+	// (GET /users/{userId})
+	GetUser(ctx context.Context, request GetUserRequestObject) (GetUserResponseObject, error)
+	// 気になるを送る
+	// (POST /users/{userId}/interests)
+	SendInterest(ctx context.Context, request SendInterestRequestObject) (SendInterestResponseObject, error)
 }
 
 type StrictHandlerFunc func(ctx echo.Context, request any) (any, error)
@@ -1882,6 +2071,56 @@ func (sh *strictHandler) ListRecommendUsers(ctx echo.Context) error {
 		return err
 	} else if validResponse, ok := response.(ListRecommendUsersResponseObject); ok {
 		return validResponse.VisitListRecommendUsersResponse(ctx.Response())
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// GetUser operation middleware
+func (sh *strictHandler) GetUser(ctx echo.Context, userId int) error {
+	var request GetUserRequestObject
+
+	request.UserId = userId
+
+	handler := func(ctx echo.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.GetUser(ctx.Request().Context(), request.(GetUserRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "GetUser")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return err
+	} else if validResponse, ok := response.(GetUserResponseObject); ok {
+		return validResponse.VisitGetUserResponse(ctx.Response())
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// SendInterest operation middleware
+func (sh *strictHandler) SendInterest(ctx echo.Context, userId int) error {
+	var request SendInterestRequestObject
+
+	request.UserId = userId
+
+	handler := func(ctx echo.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.SendInterest(ctx.Request().Context(), request.(SendInterestRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SendInterest")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return err
+	} else if validResponse, ok := response.(SendInterestResponseObject); ok {
+		return validResponse.VisitSendInterestResponse(ctx.Response())
 	} else if response != nil {
 		return fmt.Errorf("unexpected response type: %T", response)
 	}

@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"errors"
 
 	authmw "github.com/katedegree99/spark/api/internal/adapter/middleware"
 	"github.com/katedegree99/spark/api/internal/domain/repository"
@@ -14,6 +15,8 @@ type UsersHandler struct {
 	newUserUsecase   usecase.NewUserUsecase
 	recommendUsecase usecase.RecommendUsecase
 	listUsersUsecase usecase.ListUsersUsecase
+	getUserUsecase   usecase.GetUserUsecase
+	interestUsecase  usecase.InterestUsecase
 }
 
 func NewUsersHandler(
@@ -21,12 +24,16 @@ func NewUsersHandler(
 	newUserUsecase usecase.NewUserUsecase,
 	recommendUsecase usecase.RecommendUsecase,
 	listUsersUsecase usecase.ListUsersUsecase,
+	getUserUsecase usecase.GetUserUsecase,
+	interestUsecase usecase.InterestUsecase,
 ) *UsersHandler {
 	return &UsersHandler{
 		pickupUsecase:    pickupUsecase,
 		newUserUsecase:   newUserUsecase,
 		recommendUsecase: recommendUsecase,
 		listUsersUsecase: listUsersUsecase,
+		getUserUsecase:   getUserUsecase,
+		interestUsecase:  interestUsecase,
 	}
 }
 
@@ -216,5 +223,84 @@ func (h *UsersHandler) ListUsers(ctx context.Context, request generated.ListUser
 
 	return generated.ListUsers200JSONResponse{
 		Users: &users,
+	}, nil
+}
+
+func (h *UsersHandler) GetUser(ctx context.Context, request generated.GetUserRequestObject) (generated.GetUserResponseObject, error) {
+	myUserID, ok := authmw.UserIDFromGoContext(ctx)
+	if !ok {
+		return generated.GetUser401JSONResponse{
+			UnauthorizedJSONResponse: generated.UnauthorizedJSONResponse{
+				Code:    "UNAUTHORIZED",
+				Message: "unauthorized",
+			},
+		}, nil
+	}
+
+	result, err := h.getUserUsecase.GetUser(ctx, myUserID, uint(request.UserId))
+	if err != nil {
+		if errors.Is(err, usecase.ErrUserNotFound) {
+			return generated.GetUser404JSONResponse{
+				Code:    "NOT_FOUND",
+				Message: "user not found",
+			}, nil
+		}
+		return nil, err
+	}
+
+	userIDInt := int(result.UserID)
+	resp := generated.UserDetailResponse{
+		UserId:       &userIDInt,
+		Name:         &result.Name,
+		Bio:          result.Bio,
+		IconUrl:      result.IconURL,
+		IsInterested: &result.IsInterested,
+	}
+
+	matched := make([]generated.TagResponse, 0, len(result.MatchedThings))
+	for _, t := range result.MatchedThings {
+		matched = append(matched, tagRecordToResponse(t))
+	}
+	resp.MatchedTags = &matched
+
+	unmatched := make([]generated.TagResponse, 0, len(result.UnmatchedThings))
+	for _, t := range result.UnmatchedThings {
+		unmatched = append(unmatched, tagRecordToResponse(t))
+	}
+	resp.UnmatchedTags = &unmatched
+
+	return generated.GetUser200JSONResponse(resp), nil
+}
+
+func (h *UsersHandler) SendInterest(ctx context.Context, request generated.SendInterestRequestObject) (generated.SendInterestResponseObject, error) {
+	fromUserID, ok := authmw.UserIDFromGoContext(ctx)
+	if !ok {
+		return generated.SendInterest401JSONResponse{
+			UnauthorizedJSONResponse: generated.UnauthorizedJSONResponse{
+				Code:    "UNAUTHORIZED",
+				Message: "unauthorized",
+			},
+		}, nil
+	}
+
+	result, err := h.interestUsecase.SendInterest(ctx, fromUserID, uint(request.UserId))
+	if err != nil {
+		if errors.Is(err, usecase.ErrUserNotFound) {
+			return generated.SendInterest404JSONResponse{
+				Code:    "NOT_FOUND",
+				Message: "user not found",
+			}, nil
+		}
+		if errors.Is(err, usecase.ErrAlreadyInterested) {
+			return generated.SendInterest409JSONResponse{
+				Code:    "ALREADY_INTERESTED",
+				Message: "already sent interest to this user",
+			}, nil
+		}
+		return nil, err
+	}
+
+	return generated.SendInterest200JSONResponse{
+		Matched: &result.Matched,
 	}, nil
 }
