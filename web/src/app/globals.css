@@ -15,8 +15,25 @@
 	--border: #dddddd;
 	/* 見出し・ラベルの濃いテキスト色 */
 	--ink: #2f2f2f;
+	/* ink よりやや薄いラベル色。シャドウの rgba(77,77,77,…) と同一グレー */
+	--ink-light: #4d4d4d;
 	/* バリデーションエラー色 (brand-red とは別。Figma: #ff3434) */
 	--error: #ff3434;
+
+	/* --- ブランドグラデの共通ストップ列 ---
+	   全グラデ(黄 → 橙 → 赤)で色・位置は共通で、角度だけが Figma の
+	   セマンティクス(mainToRightBottom 等)ごとに異なる。各 @utility は
+	   この変数を参照し、角度のみを持つ。 */
+	--brand-stops:
+		var(--brand-yellow) 0.98%, var(--brand-orange) 50%, var(--brand-red) 99.02%;
+	/* 逆順(赤 → 橙 → 黄)。サイドパネル用 */
+	--brand-stops-reverse:
+		var(--brand-red) 0.98%, var(--brand-orange) 50%, var(--brand-yellow) 99.02%;
+	/* ブランド色を白 18% で明るくした列。タグ塗りの枠リング用 */
+	--brand-stops-soft:
+		color-mix(in srgb, var(--brand-yellow) 82%, white) 0.98%,
+		color-mix(in srgb, var(--brand-orange) 82%, white) 50%,
+		color-mix(in srgb, var(--brand-red) 82%, white) 99.02%;
 }
 
 @theme inline {
@@ -26,6 +43,9 @@
 		var(--font-roboto), "SF Pro Text", -apple-system, BlinkMacSystemFont,
 		"Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", Meiryo,
 		sans-serif;
+	/* Figma 数字用「DIN Bold」の代替(Google Fonts の Barlow 700)。
+	   `font-din` で利用する(名前は Figma のデザイン意図に合わせて維持)。 */
+	--font-din: var(--font-barlow), var(--font-roboto), sans-serif;
 
 	/* --- Design tokens → utilities ---
      spacing / font-size / font-weight / radius(12px=rounded-xl) は
@@ -36,51 +56,83 @@
 	--color-secondary: var(--secondary);
 	--color-border: var(--border);
 	--color-ink: var(--ink);
+	--color-ink-light: var(--ink-light);
 	--color-error: var(--error);
 }
 
 /* メインボタン等のブランドグラデーション(orange → yellow、右下方向)
    Figma: Design/Semantic/bg/mainToRightBottom */
 @utility bg-brand-gradient {
-	background-image: linear-gradient(
-		155.54deg,
-		var(--brand-yellow) 0.98%,
-		var(--brand-orange) 50%,
-		var(--brand-red) 99.02%
-	);
+	background-image: linear-gradient(155.54deg, var(--brand-stops));
+}
+
+/* タグ(共通/filled)の塗り。Figma のタグは共有グラデ(≈155°・縦)ではなく
+   ≈141°(横寄り)で、黄 → 橙 が主体になり赤は隅だけ。これにより 1px の
+   brand-yellow ボーダーがフィルに溶けて見えなくなる(縦グラデだと下辺が赤に
+   なり黄色ボーダーがリングとして浮く)。Figma: tag/main の gradient に一致。 */
+@utility bg-brand-gradient-tag {
+	background-image: linear-gradient(141.2deg, var(--brand-stops));
+}
+
+/* タグ(共通/filled)の塗り + グラデ枠。padding-box に塗りグラデ(141°)、
+   border-box に塗りとほぼ同トーン(--brand-stops-soft)のグラデ枠(153°)を
+   重ねる。枠は背景に馴染む控えめなエッジで、白っぽく浮かない。
+   利用側は `border`(幅 1px)+ このユーティリティ + 白文字。 */
+@utility bg-brand-gradient-tag-fill {
+	border-color: transparent;
+	background-image:
+		linear-gradient(141.2deg, var(--brand-stops)),
+		linear-gradient(153.42deg, var(--brand-stops-soft));
+	background-origin: border-box;
+	background-clip: padding-box, border-box;
+}
+
+/* タグ(非共通/outline)の枠線グラデ。単色ボーダーではなく文字と同じ
+   ブランドグラデ(≈153°)の 1px 枠にする。white 塗り(padding-box)と
+   グラデ枠(border-box)の二重背景で描く。Figma: tag/border-main の stroke。
+   利用側は `border`(幅 1px)+ このユーティリティを併用する。 */
+@utility border-brand-gradient-tag {
+	border-color: transparent;
+	background-image:
+		linear-gradient(#fff, #fff), linear-gradient(153.42deg, var(--brand-stops));
+	background-origin: border-box;
+	background-clip: padding-box, border-box;
+}
+
+/* 円形アバター等の枠線グラデ。単色ボーダーの代わりにブランドグラデ(≈155°)の
+   枠にする。白塗り(padding-box)とグラデ枠(border-box)の二重背景で描く。
+   画像アバターでは白塗りは object-cover 画像の下に隠れるため見えず、枠だけが
+   グラデになる。利用側は `border`(任意幅)+ このユーティリティを併用する。 */
+@utility border-brand-gradient {
+	border-color: transparent;
+	background-image:
+		linear-gradient(#fff, #fff), linear-gradient(155.54deg, var(--brand-stops));
+	background-origin: border-box;
+	background-clip: padding-box, border-box;
 }
 
 /* 各画面ヘッダー帯の背景グラデ(黄 → 橙 → 赤、左下→右上方向)。
    白い装飾は auth-header.svg を重ねる(Figma の bg も白オーバーレイは無し)。
-   Figma: Design/Semantic/bg/mainToRightTop (bg ノードの実ベクトルから ≈7.2°) */
+   Figma: Design/Semantic/bg/mainToRightTop (bg ノードの実ベクトルから ≈7.2°)
+   ※ Figma 上のストップは 0%/100% だが、共通列(0.98%/99.02%)との差は視覚上
+     区別できないため共通列に寄せている。 */
 @utility bg-brand-gradient-top {
-	background-image: linear-gradient(
-		7.2deg,
-		var(--brand-yellow) 0%,
-		var(--brand-orange) 50%,
-		var(--brand-red) 100%
-	);
+	background-image: linear-gradient(7.2deg, var(--brand-stops));
 }
 
 /* サイドパネル用グラデ(赤 → 橙 → 黄、左下方向)
    Figma: Design/Semantic/bg/mainToLeftBottom */
 @utility bg-brand-panel {
-	background-image: linear-gradient(
-		21.89deg,
-		var(--brand-red) 0%,
-		var(--brand-orange) 50%,
-		var(--brand-yellow) 100%
-	);
+	background-image: linear-gradient(21.89deg, var(--brand-stops-reverse));
 }
 
-/* SP 上部の装飾ヘッダー背景(橙 → 黄、右下方向)。
-   白い装飾は auth-header.svg を重ねる。 */
-@utility bg-auth-header {
-	background-image: linear-gradient(
-		135deg,
-		var(--brand-orange) 0%,
-		var(--brand-yellow) 100%
-	);
+/* 横スクロール領域のスクロールバー非表示(全ブラウザ分の 3 点セット)。 */
+@utility scrollbar-none {
+	-ms-overflow-style: none;
+	scrollbar-width: none;
+	&::-webkit-scrollbar {
+		display: none;
+	}
 }
 
 @media (prefers-color-scheme: dark) {
@@ -94,6 +146,8 @@ body {
 	background: var(--background);
 	color: var(--foreground);
 	font-family: var(--font-sans);
+	/* 最上部/最下部でのオーバースクロール(バウンス)を止め、コンテンツ外の空白露出を防ぐ */
+	overscroll-behavior-y: none;
 }
 
 /* ブラウザのオートフィル(予測変換選択)時もデザインを保つ。

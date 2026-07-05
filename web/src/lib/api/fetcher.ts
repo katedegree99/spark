@@ -48,11 +48,18 @@ export async function apiFetch<T>(
 		}
 	}
 
-	const res = await fetch(`${API_BASE_URL}${path}`, {
-		...init,
-		headers,
-		cache: "no-store",
-	});
+	// ネットワーク到達不可(接続拒否・DNS 失敗等)でも fetch の reject を伝播させず、
+	// 「例外は投げず ApiResult で返す」契約を守る。status 0 = ネットワークエラー。
+	let res: Response;
+	try {
+		res = await fetch(`${API_BASE_URL}${path}`, {
+			...init,
+			headers,
+			cache: "no-store",
+		});
+	} catch {
+		return { ok: false, status: 0, error: null };
+	}
 
 	const raw = [204, 205, 304].includes(res.status) ? "" : await res.text();
 	// backend が不正な JSON(500 の HTML 等)を返しても例外を投げないよう、

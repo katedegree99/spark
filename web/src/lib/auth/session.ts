@@ -14,7 +14,7 @@ import type { AuthTokensResponse } from "@/lib/api/generated/model";
 const ACCESS_TOKEN = "access_token";
 const REFRESH_TOKEN = "refresh_token";
 
-const ACCESS_FALLBACK_MAX_AGE = 60 * 15; // 15分(API が expires_in を返さない場合)
+const ACCESS_FALLBACK_MAX_AGE = 60 * 15; // 15分(API が expiresIn を返さない場合)
 // backend の refresh token DB 有効期限(7日)に合わせる。長くすると Cookie だけ
 // 生き残り「Cookie はあるが refresh は失効」状態になるため一致させること。
 const REFRESH_MAX_AGE = 60 * 60 * 24 * 7; // 7日
@@ -28,7 +28,7 @@ const REFRESH_MAX_AGE = 60 * 60 * 24 * 7; // 7日
 
 /**
  * トークンを httpOnly Cookie に保存する。
- * access は API の `expires_in`、refresh は固定 30 日を既定の寿命とする。
+ * access は API の `expiresIn`、refresh は固定 7 日を既定の寿命とする。
  */
 export async function setAuthCookies(
 	tokens: AuthTokensResponse,
@@ -41,14 +41,14 @@ export async function setAuthCookies(
 		path: "/",
 	};
 
-	if (tokens.access_token) {
-		store.set(ACCESS_TOKEN, tokens.access_token, {
+	if (tokens.accessToken) {
+		store.set(ACCESS_TOKEN, tokens.accessToken, {
 			...base,
-			maxAge: tokens.expires_in ?? ACCESS_FALLBACK_MAX_AGE,
+			maxAge: tokens.expiresIn ?? ACCESS_FALLBACK_MAX_AGE,
 		});
 	}
-	if (tokens.refresh_token) {
-		store.set(REFRESH_TOKEN, tokens.refresh_token, {
+	if (tokens.refreshToken) {
+		store.set(REFRESH_TOKEN, tokens.refreshToken, {
 			...base,
 			maxAge: REFRESH_MAX_AGE,
 		});

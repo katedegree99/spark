@@ -135,7 +135,7 @@ export async function verifyOtpAction(input: {
 /**
  * Google の ID トークンでログイン/連携する Server Action。
  *
- * フロントが GIS で取得した `id_token` を検証のため backend へ送る。
+ * フロントが GIS で取得した ID トークンを `idToken` として backend へ送る。
  * Email フローと違い OTP は無く、成功時に直接 `AuthTokensResponse` が返るので
  * トークンを httpOnly Cookie に保存する。
  */
@@ -146,7 +146,7 @@ export async function googleLoginAction(
 		return { ok: false, message: "Google 認証情報を取得できませんでした" };
 	}
 
-	const payload: GoogleLoginRequest = { id_token: idToken };
+	const payload: GoogleLoginRequest = { idToken };
 
 	const res = await apiFetch<AuthTokensResponse>("/auth/google", {
 		method: "POST",
