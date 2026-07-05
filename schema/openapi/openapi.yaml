@@ -452,6 +452,50 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /interests:
+    get:
+      tags: [users]
+      summary: 気になる一覧を取得する
+      description: |
+        `direction=sent` で自分が送った気になる、`direction=received` で相手から受け取った気になるの一覧を返す。
+        offset / limit でページネーションする。
+      operationId: listInterests
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: direction
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [sent, received]
+          description: sent = 自分から送った / received = 相手から受け取った
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          description: 取得開始位置
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 20
+          description: 取得件数
+      responses:
+        '200':
+          description: 気になる一覧
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecommendUsersResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
   /users/pickup:
     get:
       tags: [users]

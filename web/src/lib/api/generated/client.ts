@@ -23,6 +23,7 @@ import type {
   GoogleLoginRequest,
   ImageResponse,
   InterestResponse,
+  ListInterestsParams,
   ListThingsParams,
   ListUsersParams,
   LoginRequest,
@@ -1237,6 +1238,90 @@ export const useSendInterest = <TError = Promise<UnauthorizedResponse | ErrorRes
   const swrFn = getSendInterestMutationFetcher(userId, fetchOptions);
 
   const query = useSWRMutation(swrKey, swrFn, swrOptions)
+
+  return {
+    swrKey,
+    ...query
+  }
+}
+
+export type listInterestsResponse200 = {
+  data: RecommendUsersResponse
+  status: 200
+}
+
+export type listInterestsResponse401 = {
+  data: UnauthorizedResponse
+  status: 401
+}
+
+export type listInterestsResponseSuccess = (listInterestsResponse200) & {
+  headers: Headers;
+};
+export type listInterestsResponseError = (listInterestsResponse401) & {
+  headers: Headers;
+};
+
+export type listInterestsResponse = (listInterestsResponseSuccess | listInterestsResponseError)
+
+export const getListInterestsUrl = (params: ListInterestsParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/interests?${stringifiedParams}` : `/interests`
+}
+
+/**
+ * `direction=sent` で自分が送った気になる、`direction=received` で相手から受け取った気になるの一覧を返す。
+ * offset / limit でページネーションする。
+ * @summary 気になる一覧を取得する
+ */
+export const listInterests = async (params: ListInterestsParams, options?: RequestInit): Promise<listInterestsResponse> => {
+
+  const res = await fetch(getListInterestsUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: listInterestsResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as listInterestsResponse
+}
+
+
+
+
+export const getListInterestsKey = (params: ListInterestsParams,) => [`/interests`, ...(params ? [params]: [])] as const;
+
+export type ListInterestsQueryResult = NonNullable<Awaited<ReturnType<typeof listInterests>>>
+
+/**
+ * @summary 気になる一覧を取得する
+ */
+export const useListInterests = <TError = Promise<UnauthorizedResponse>>(
+  params: ListInterestsParams, options?: { swr?:SWRConfiguration<Awaited<ReturnType<typeof listInterests>>, TError> & { swrKey?: Key, enabled?: boolean }, fetch?: RequestInit }
+) => {
+  const {swr: swrOptions, fetch: fetchOptions} = options ?? {}
+
+  const isEnabled = swrOptions?.enabled !== false
+  const swrKey = swrOptions?.swrKey ?? (() => isEnabled ? getListInterestsKey(params) : null);
+  const swrFn = () => listInterests(params, fetchOptions)
+
+  const query = useSwr<Awaited<ReturnType<typeof swrFn>>, TError>(swrKey, swrFn, swrOptions)
 
   return {
     swrKey,

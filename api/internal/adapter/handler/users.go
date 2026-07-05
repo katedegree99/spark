@@ -11,12 +11,13 @@ import (
 )
 
 type UsersHandler struct {
-	pickupUsecase    usecase.PickupUsecase
-	newUserUsecase   usecase.NewUserUsecase
-	recommendUsecase usecase.RecommendUsecase
-	listUsersUsecase usecase.ListUsersUsecase
-	getUserUsecase   usecase.GetUserUsecase
-	interestUsecase  usecase.InterestUsecase
+	pickupUsecase        usecase.PickupUsecase
+	newUserUsecase       usecase.NewUserUsecase
+	recommendUsecase     usecase.RecommendUsecase
+	listUsersUsecase     usecase.ListUsersUsecase
+	getUserUsecase       usecase.GetUserUsecase
+	interestUsecase      usecase.InterestUsecase
+	listInterestsUsecase usecase.ListInterestsUsecase
 }
 
 func NewUsersHandler(
@@ -26,14 +27,16 @@ func NewUsersHandler(
 	listUsersUsecase usecase.ListUsersUsecase,
 	getUserUsecase usecase.GetUserUsecase,
 	interestUsecase usecase.InterestUsecase,
+	listInterestsUsecase usecase.ListInterestsUsecase,
 ) *UsersHandler {
 	return &UsersHandler{
-		pickupUsecase:    pickupUsecase,
-		newUserUsecase:   newUserUsecase,
-		recommendUsecase: recommendUsecase,
-		listUsersUsecase: listUsersUsecase,
-		getUserUsecase:   getUserUsecase,
-		interestUsecase:  interestUsecase,
+		pickupUsecase:        pickupUsecase,
+		newUserUsecase:       newUserUsecase,
+		recommendUsecase:     recommendUsecase,
+		listUsersUsecase:     listUsersUsecase,
+		getUserUsecase:       getUserUsecase,
+		interestUsecase:      interestUsecase,
+		listInterestsUsecase: listInterestsUsecase,
 	}
 }
 
@@ -302,5 +305,63 @@ func (h *UsersHandler) SendInterest(ctx context.Context, request generated.SendI
 
 	return generated.SendInterest200JSONResponse{
 		Matched: &result.Matched,
+	}, nil
+}
+
+func (h *UsersHandler) ListInterests(ctx context.Context, request generated.ListInterestsRequestObject) (generated.ListInterestsResponseObject, error) {
+	userID, ok := authmw.UserIDFromGoContext(ctx)
+	if !ok {
+		return generated.ListInterests401JSONResponse{
+			UnauthorizedJSONResponse: generated.UnauthorizedJSONResponse{
+				Code:    "UNAUTHORIZED",
+				Message: "unauthorized",
+			},
+		}, nil
+	}
+
+	input := usecase.ListInterestsInput{
+		Direction: string(request.Params.Direction),
+	}
+	if request.Params.Offset != nil {
+		input.Offset = *request.Params.Offset
+	}
+	input.Limit = 20
+	if request.Params.Limit != nil {
+		input.Limit = *request.Params.Limit
+	}
+
+	results, err := h.listInterestsUsecase.ListInterests(ctx, userID, input)
+	if err != nil {
+		return nil, err
+	}
+
+	users := make([]generated.RecommendUserResponse, 0, len(results))
+	for _, r := range results {
+		userIDInt := int(r.UserID)
+		commonCount := r.CommonCount
+		ru := generated.RecommendUserResponse{
+			UserId:      &userIDInt,
+			Name:        &r.Name,
+			Bio:         r.Bio,
+			IconUrl:     r.IconURL,
+			CommonCount: &commonCount,
+		}
+		matched := make([]generated.TagResponse, 0, len(r.MatchedThings))
+		for _, t := range r.MatchedThings {
+			matched = append(matched, tagRecordToResponse(t))
+		}
+		ru.MatchedTags = &matched
+
+		unmatched := make([]generated.TagResponse, 0, len(r.UnmatchedThings))
+		for _, t := range r.UnmatchedThings {
+			unmatched = append(unmatched, tagRecordToResponse(t))
+		}
+		ru.UnmatchedTags = &unmatched
+
+		users = append(users, ru)
+	}
+
+	return generated.ListInterests200JSONResponse{
+		Users: &users,
 	}, nil
 }
