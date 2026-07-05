@@ -22,6 +22,7 @@ import type {
   GoogleLoginRequest,
   ImageResponse,
   ListThingsParams,
+  ListUsersParams,
   LoginRequest,
   NewUsersResponse,
   OtpSentResponse,
@@ -811,6 +812,99 @@ export const useCreateThing = <TError = Promise<UnauthorizedResponse | ErrorResp
   const swrFn = getCreateThingMutationFetcher(fetchOptions);
 
   const query = useSWRMutation(swrKey, swrFn, swrOptions)
+
+  return {
+    swrKey,
+    ...query
+  }
+}
+
+export type listUsersResponse200 = {
+  data: RecommendUsersResponse
+  status: 200
+}
+
+export type listUsersResponse401 = {
+  data: UnauthorizedResponse
+  status: 401
+}
+
+export type listUsersResponseSuccess = (listUsersResponse200) & {
+  headers: Headers;
+};
+export type listUsersResponseError = (listUsersResponse401) & {
+  headers: Headers;
+};
+
+export type listUsersResponse = (listUsersResponseSuccess | listUsersResponseError)
+
+export const getListUsersUrl = (params?: ListUsersParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    const explodeParameters = ["tagIds"];
+
+    if (Array.isArray(value) && explodeParameters.includes(key)) {
+      value.forEach((v) => {
+        normalizedParams.append(key, v === null ? 'null' : String(v));
+      });
+      return;
+    }
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/users?${stringifiedParams}` : `/users`
+}
+
+/**
+ * 登録済みユーザーの一覧を返す。
+ * `q` を指定すると名前の前方一致で絞り込む。
+ * `tagIds` を指定するとそのタグを持つユーザーに絞り込む（AND 条件）。
+ * @summary ユーザー一覧を取得する
+ */
+export const listUsers = async (params?: ListUsersParams, options?: RequestInit): Promise<listUsersResponse> => {
+
+  const res = await fetch(getListUsersUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: listUsersResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as listUsersResponse
+}
+
+
+
+
+export const getListUsersKey = (params?: ListUsersParams,) => [`/users`, ...(params ? [params]: [])] as const;
+
+export type ListUsersQueryResult = NonNullable<Awaited<ReturnType<typeof listUsers>>>
+
+/**
+ * @summary ユーザー一覧を取得する
+ */
+export const useListUsers = <TError = Promise<UnauthorizedResponse>>(
+  params?: ListUsersParams, options?: { swr?:SWRConfiguration<Awaited<ReturnType<typeof listUsers>>, TError> & { swrKey?: Key, enabled?: boolean }, fetch?: RequestInit }
+) => {
+  const {swr: swrOptions, fetch: fetchOptions} = options ?? {}
+
+  const isEnabled = swrOptions?.enabled !== false
+  const swrKey = swrOptions?.swrKey ?? (() => isEnabled ? getListUsersKey(params) : null);
+  const swrFn = () => listUsers(params, fetchOptions)
+
+  const query = useSwr<Awaited<ReturnType<typeof swrFn>>, TError>(swrKey, swrFn, swrOptions)
 
   return {
     swrKey,

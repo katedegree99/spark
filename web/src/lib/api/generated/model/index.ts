@@ -12,6 +12,7 @@ export * from './errorResponse';
 export * from './googleLoginRequest';
 export * from './imageResponse';
 export * from './listThingsParams';
+export * from './listUsersParams';
 export * from './loginRequest';
 export * from './newUserResponse';
 export * from './newUsersResponse';

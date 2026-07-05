@@ -283,6 +283,21 @@ type ListThingsParams struct {
 	Q *string `form:"q,omitempty" json:"q,omitempty"`
 }
 
+// ListUsersParams defines parameters for ListUsers.
+type ListUsersParams struct {
+	// Q 検索キーワード（名前の前方一致）
+	Q *string `form:"q,omitempty" json:"q,omitempty"`
+
+	// TagIds 絞り込むタグ ID のリスト（AND 条件）
+	TagIds *[]int `form:"tagIds,omitempty" json:"tagIds,omitempty"`
+
+	// Offset 取得開始位置
+	Offset *int `form:"offset,omitempty" json:"offset,omitempty"`
+
+	// Limit 取得件数
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
 // LoginWithGoogleJSONRequestBody defines body for LoginWithGoogle for application/json ContentType.
 type LoginWithGoogleJSONRequestBody = GoogleLoginRequest
 
@@ -351,6 +366,9 @@ type ServerInterface interface {
 	// 新しい事柄を作成する
 	// (POST /things)
 	CreateThing(ctx echo.Context) error
+	// ユーザー一覧を取得する
+	// (GET /users)
+	ListUsers(ctx echo.Context, params ListUsersParams) error
 	// 新着ユーザー一覧を取得する
 	// (GET /users/new)
 	ListNewUsers(ctx echo.Context) error
@@ -498,6 +516,47 @@ func (w *ServerInterfaceWrapper) CreateThing(ctx echo.Context) error {
 	return err
 }
 
+// ListUsers converts echo context to params.
+func (w *ServerInterfaceWrapper) ListUsers(ctx echo.Context) error {
+	var err error
+
+	ctx.Set(string(BearerAuthScopes), []string{})
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListUsersParams
+	// ------------- Optional query parameter "q" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "q", ctx.QueryParams(), &params.Q, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter q: %s", err))
+	}
+
+	// ------------- Optional query parameter "tagIds" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "tagIds", ctx.QueryParams(), &params.TagIds, runtime.BindQueryParameterOptions{Type: "array", Format: ""})
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter tagIds: %s", err))
+	}
+
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "offset", ctx.QueryParams(), &params.Offset, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter offset: %s", err))
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", ctx.QueryParams(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter limit: %s", err))
+	}
+
+	// Invoke the callback with all the unmarshaled arguments
+	err = w.Handler.ListUsers(ctx, params)
+	return err
+}
+
 // ListNewUsers converts echo context to params.
 func (w *ServerInterfaceWrapper) ListNewUsers(ctx echo.Context) error {
 	var err error
@@ -588,6 +647,7 @@ func RegisterHandlersWithOptions(router EchoRouter, si ServerInterface, options 
 	router.POST(options.BaseURL+"/profiles/me", wrapper.CreateMyProfile, options.OperationMiddlewares["createMyProfile"]...)
 	router.GET(options.BaseURL+"/things", wrapper.ListThings, options.OperationMiddlewares["listThings"]...)
 	router.POST(options.BaseURL+"/things", wrapper.CreateThing, options.OperationMiddlewares["createThing"]...)
+	router.GET(options.BaseURL+"/users", wrapper.ListUsers, options.OperationMiddlewares["listUsers"]...)
 	router.GET(options.BaseURL+"/users/new", wrapper.ListNewUsers, options.OperationMiddlewares["listNewUsers"]...)
 	router.GET(options.BaseURL+"/users/pickup", wrapper.ListPickupUsers, options.OperationMiddlewares["listPickupUsers"]...)
 	router.GET(options.BaseURL+"/users/recommend", wrapper.ListRecommendUsers, options.OperationMiddlewares["listRecommendUsers"]...)
@@ -1191,6 +1251,42 @@ func (response CreateThing422JSONResponse) VisitCreateThingResponse(w http.Respo
 	return err
 }
 
+type ListUsersRequestObject struct {
+	Params ListUsersParams
+}
+
+type ListUsersResponseObject interface {
+	VisitListUsersResponse(w http.ResponseWriter) error
+}
+
+type ListUsers200JSONResponse RecommendUsersResponse
+
+func (response ListUsers200JSONResponse) VisitListUsersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListUsers401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListUsers401JSONResponse) VisitListUsersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListNewUsersRequestObject struct {
 }
 
@@ -1334,6 +1430,9 @@ type StrictServerInterface interface {
 	// 新しい事柄を作成する
 	// (POST /things)
 	CreateThing(ctx context.Context, request CreateThingRequestObject) (CreateThingResponseObject, error)
+	// ユーザー一覧を取得する
+	// (GET /users)
+	ListUsers(ctx context.Context, request ListUsersRequestObject) (ListUsersResponseObject, error)
 	// 新着ユーザー一覧を取得する
 	// (GET /users/new)
 	ListNewUsers(ctx context.Context, request ListNewUsersRequestObject) (ListNewUsersResponseObject, error)
@@ -1689,6 +1788,31 @@ func (sh *strictHandler) CreateThing(ctx echo.Context) error {
 		return err
 	} else if validResponse, ok := response.(CreateThingResponseObject); ok {
 		return validResponse.VisitCreateThingResponse(ctx.Response())
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// ListUsers operation middleware
+func (sh *strictHandler) ListUsers(ctx echo.Context, params ListUsersParams) error {
+	var request ListUsersRequestObject
+
+	request.Params = params
+
+	handler := func(ctx echo.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ListUsers(ctx.Request().Context(), request.(ListUsersRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListUsers")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return err
+	} else if validResponse, ok := response.(ListUsersResponseObject); ok {
+		return validResponse.VisitListUsersResponse(ctx.Response())
 	} else if response != nil {
 		return fmt.Errorf("unexpected response type: %T", response)
 	}

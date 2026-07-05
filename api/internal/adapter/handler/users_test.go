@@ -52,7 +52,7 @@ func (m *mockRecommendUsecase) ListRecommend(ctx context.Context, userID uint) (
 
 func newTestEchoWithUsers(pickup usecase.PickupUsecase, newUser usecase.NewUserUsecase, recommend usecase.RecommendUsecase) *echo.Echo {
 	h := &handler.Handler{
-		UsersHandler: handler.NewUsersHandler(pickup, newUser, recommend),
+		UsersHandler: handler.NewUsersHandler(pickup, newUser, recommend, nil),
 	}
 	return router.NewRouter(h)
 }

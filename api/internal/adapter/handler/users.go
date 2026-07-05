@@ -13,17 +13,20 @@ type UsersHandler struct {
 	pickupUsecase    usecase.PickupUsecase
 	newUserUsecase   usecase.NewUserUsecase
 	recommendUsecase usecase.RecommendUsecase
+	listUsersUsecase usecase.ListUsersUsecase
 }
 
 func NewUsersHandler(
 	pickupUsecase usecase.PickupUsecase,
 	newUserUsecase usecase.NewUserUsecase,
 	recommendUsecase usecase.RecommendUsecase,
+	listUsersUsecase usecase.ListUsersUsecase,
 ) *UsersHandler {
 	return &UsersHandler{
 		pickupUsecase:    pickupUsecase,
 		newUserUsecase:   newUserUsecase,
 		recommendUsecase: recommendUsecase,
+		listUsersUsecase: listUsersUsecase,
 	}
 }
 
@@ -145,6 +148,73 @@ func (h *UsersHandler) ListRecommendUsers(ctx context.Context, _ generated.ListR
 	}
 
 	return generated.ListRecommendUsers200JSONResponse{
+		Users: &users,
+	}, nil
+}
+
+func (h *UsersHandler) ListUsers(ctx context.Context, request generated.ListUsersRequestObject) (generated.ListUsersResponseObject, error) {
+	userID, ok := authmw.UserIDFromGoContext(ctx)
+	if !ok {
+		return generated.ListUsers401JSONResponse{
+			UnauthorizedJSONResponse: generated.UnauthorizedJSONResponse{
+				Code:    "UNAUTHORIZED",
+				Message: "unauthorized",
+			},
+		}, nil
+	}
+
+	input := usecase.ListUsersInput{}
+	if request.Params.Q != nil {
+		input.Q = request.Params.Q
+	}
+	if request.Params.TagIds != nil {
+		tagIDs := make([]uint, 0, len(*request.Params.TagIds))
+		for _, id := range *request.Params.TagIds {
+			tagIDs = append(tagIDs, uint(id))
+		}
+		input.TagIDs = tagIDs
+	}
+	if request.Params.Offset != nil {
+		input.Offset = *request.Params.Offset
+	}
+	input.Limit = 20
+	if request.Params.Limit != nil {
+		input.Limit = *request.Params.Limit
+	}
+
+	results, err := h.listUsersUsecase.ListUsers(ctx, userID, input)
+	if err != nil {
+		return nil, err
+	}
+
+	users := make([]generated.RecommendUserResponse, 0, len(results))
+	for _, r := range results {
+		userIDInt := int(r.UserID)
+		commonCount := r.CommonCount
+		ru := generated.RecommendUserResponse{
+			UserId:      &userIDInt,
+			Name:        &r.Name,
+			Bio:         r.Bio,
+			IconUrl:     r.IconURL,
+			CommonCount: &commonCount,
+		}
+
+		matched := make([]generated.TagResponse, 0, len(r.MatchedThings))
+		for _, t := range r.MatchedThings {
+			matched = append(matched, tagRecordToResponse(t))
+		}
+		ru.MatchedTags = &matched
+
+		unmatched := make([]generated.TagResponse, 0, len(r.UnmatchedThings))
+		for _, t := range r.UnmatchedThings {
+			unmatched = append(unmatched, tagRecordToResponse(t))
+		}
+		ru.UnmatchedTags = &unmatched
+
+		users = append(users, ru)
+	}
+
+	return generated.ListUsers200JSONResponse{
 		Users: &users,
 	}, nil
 }
