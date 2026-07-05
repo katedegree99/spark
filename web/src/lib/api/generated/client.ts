@@ -7,6 +7,7 @@
  */
 import useSwr from 'swr';
 import type {
+  Arguments,
   Key,
   SWRConfiguration
 } from 'swr';
@@ -21,7 +22,9 @@ import type {
   ErrorResponse,
   GoogleLoginRequest,
   ImageResponse,
+  InterestResponse,
   ListThingsParams,
+  ListUsersParams,
   LoginRequest,
   NewUsersResponse,
   OtpSentResponse,
@@ -38,6 +41,7 @@ import type {
   ThingsResponse,
   UnauthorizedResponse,
   UploadImageBody,
+  UserDetailResponse,
   ValidationErrorResponse
 } from './model';
 
@@ -818,6 +822,99 @@ export const useCreateThing = <TError = Promise<UnauthorizedResponse | ErrorResp
   }
 }
 
+export type listUsersResponse200 = {
+  data: RecommendUsersResponse
+  status: 200
+}
+
+export type listUsersResponse401 = {
+  data: UnauthorizedResponse
+  status: 401
+}
+
+export type listUsersResponseSuccess = (listUsersResponse200) & {
+  headers: Headers;
+};
+export type listUsersResponseError = (listUsersResponse401) & {
+  headers: Headers;
+};
+
+export type listUsersResponse = (listUsersResponseSuccess | listUsersResponseError)
+
+export const getListUsersUrl = (params?: ListUsersParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    const explodeParameters = ["tagIds"];
+
+    if (Array.isArray(value) && explodeParameters.includes(key)) {
+      value.forEach((v) => {
+        normalizedParams.append(key, v === null ? 'null' : String(v));
+      });
+      return;
+    }
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/users?${stringifiedParams}` : `/users`
+}
+
+/**
+ * 登録済みユーザーの一覧を返す。
+ * `q` を指定すると名前の前方一致で絞り込む。
+ * `tagIds` を指定するとそのタグを持つユーザーに絞り込む（AND 条件）。
+ * @summary ユーザー一覧を取得する
+ */
+export const listUsers = async (params?: ListUsersParams, options?: RequestInit): Promise<listUsersResponse> => {
+
+  const res = await fetch(getListUsersUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: listUsersResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as listUsersResponse
+}
+
+
+
+
+export const getListUsersKey = (params?: ListUsersParams,) => [`/users`, ...(params ? [params]: [])] as const;
+
+export type ListUsersQueryResult = NonNullable<Awaited<ReturnType<typeof listUsers>>>
+
+/**
+ * @summary ユーザー一覧を取得する
+ */
+export const useListUsers = <TError = Promise<UnauthorizedResponse>>(
+  params?: ListUsersParams, options?: { swr?:SWRConfiguration<Awaited<ReturnType<typeof listUsers>>, TError> & { swrKey?: Key, enabled?: boolean }, fetch?: RequestInit }
+) => {
+  const {swr: swrOptions, fetch: fetchOptions} = options ?? {}
+
+  const isEnabled = swrOptions?.enabled !== false
+  const swrKey = swrOptions?.swrKey ?? (() => isEnabled ? getListUsersKey(params) : null);
+  const swrFn = () => listUsers(params, fetchOptions)
+
+  const query = useSwr<Awaited<ReturnType<typeof swrFn>>, TError>(swrKey, swrFn, swrOptions)
+
+  return {
+    swrKey,
+    ...query
+  }
+}
+
 export type listNewUsersResponse200 = {
   data: NewUsersResponse
   status: 200
@@ -966,6 +1063,180 @@ export const useListRecommendUsers = <TError = Promise<UnauthorizedResponse>>(
   const swrFn = () => listRecommendUsers(fetchOptions)
 
   const query = useSwr<Awaited<ReturnType<typeof swrFn>>, TError>(swrKey, swrFn, swrOptions)
+
+  return {
+    swrKey,
+    ...query
+  }
+}
+
+export type getUserResponse200 = {
+  data: UserDetailResponse
+  status: 200
+}
+
+export type getUserResponse401 = {
+  data: UnauthorizedResponse
+  status: 401
+}
+
+export type getUserResponse404 = {
+  data: ErrorResponse
+  status: 404
+}
+
+export type getUserResponseSuccess = (getUserResponse200) & {
+  headers: Headers;
+};
+export type getUserResponseError = (getUserResponse401 | getUserResponse404) & {
+  headers: Headers;
+};
+
+export type getUserResponse = (getUserResponseSuccess | getUserResponseError)
+
+export const getGetUserUrl = (userId: number,) => {
+
+
+
+
+  return `/users/${userId}`
+}
+
+/**
+ * 指定したユーザーのプロフィール詳細を返す。
+ * ログインユーザーとのタグ一致情報と、既に気になるを送信済みかどうかを含む。
+ * @summary ユーザー詳細を取得する
+ */
+export const getUser = async (userId: number, options?: RequestInit): Promise<getUserResponse> => {
+
+  const res = await fetch(getGetUserUrl(userId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: getUserResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as getUserResponse
+}
+
+
+
+
+export const getGetUserKey = (userId: number,) => [`/users/${userId}`] as const;
+
+export type GetUserQueryResult = NonNullable<Awaited<ReturnType<typeof getUser>>>
+
+/**
+ * @summary ユーザー詳細を取得する
+ */
+export const useGetUser = <TError = Promise<UnauthorizedResponse | ErrorResponse>>(
+  userId: number, options?: { swr?:SWRConfiguration<Awaited<ReturnType<typeof getUser>>, TError> & { swrKey?: Key, enabled?: boolean }, fetch?: RequestInit }
+) => {
+  const {swr: swrOptions, fetch: fetchOptions} = options ?? {}
+
+  const isEnabled = swrOptions?.enabled !== false && userId !== null && userId !== undefined
+  const swrKey = swrOptions?.swrKey ?? (() => isEnabled ? getGetUserKey(userId) : null);
+  const swrFn = () => getUser(userId, fetchOptions)
+
+  const query = useSwr<Awaited<ReturnType<typeof swrFn>>, TError>(swrKey, swrFn, swrOptions)
+
+  return {
+    swrKey,
+    ...query
+  }
+}
+
+export type sendInterestResponse200 = {
+  data: InterestResponse
+  status: 200
+}
+
+export type sendInterestResponse401 = {
+  data: UnauthorizedResponse
+  status: 401
+}
+
+export type sendInterestResponse404 = {
+  data: ErrorResponse
+  status: 404
+}
+
+export type sendInterestResponse409 = {
+  data: ErrorResponse
+  status: 409
+}
+
+export type sendInterestResponseSuccess = (sendInterestResponse200) & {
+  headers: Headers;
+};
+export type sendInterestResponseError = (sendInterestResponse401 | sendInterestResponse404 | sendInterestResponse409) & {
+  headers: Headers;
+};
+
+export type sendInterestResponse = (sendInterestResponseSuccess | sendInterestResponseError)
+
+export const getSendInterestUrl = (userId: number,) => {
+
+
+
+
+  return `/users/${userId}/interests`
+}
+
+/**
+ * 指定したユーザーに「気になる」を送る。
+ * 相手もすでに自分に気になるを送っていた場合は `matched` が true になる。
+ * @summary 気になるを送る
+ */
+export const sendInterest = async (userId: number, options?: RequestInit): Promise<sendInterestResponse> => {
+
+  const res = await fetch(getSendInterestUrl(userId),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: sendInterestResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as sendInterestResponse
+}
+
+
+
+
+export const getSendInterestMutationFetcher = (userId: number, options?: RequestInit) => {
+  return (_: Key, __: { arg: Arguments }) => {
+    return sendInterest(userId, options);
+  }
+}
+export const getSendInterestMutationKey = (userId: number,) => [`/users/${userId}/interests`] as const;
+
+export type SendInterestMutationResult = NonNullable<Awaited<ReturnType<typeof sendInterest>>>
+
+/**
+ * @summary 気になるを送る
+ */
+export const useSendInterest = <TError = Promise<UnauthorizedResponse | ErrorResponse>>(
+  userId: number, options?: { swr?:SWRMutationConfiguration<Awaited<ReturnType<typeof sendInterest>>, TError, Key, Arguments, Awaited<ReturnType<typeof sendInterest>>> & { swrKey?: string }, fetch?: RequestInit}
+) => {
+
+  const {swr: swrOptions, fetch: fetchOptions} = options ?? {}
+
+  const swrKey = swrOptions?.swrKey ?? getSendInterestMutationKey(userId);
+  const swrFn = getSendInterestMutationFetcher(userId, fetchOptions);
+
+  const query = useSWRMutation(swrKey, swrFn, swrOptions)
 
   return {
     swrKey,

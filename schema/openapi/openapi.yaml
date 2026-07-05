@@ -380,6 +380,78 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /users/{userId}:
+    get:
+      tags: [users]
+      summary: ユーザー詳細を取得する
+      description: |
+        指定したユーザーのプロフィール詳細を返す。
+        ログインユーザーとのタグ一致情報と、既に気になるを送信済みかどうかを含む。
+      operationId: getUser
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: 取得対象のユーザー ID
+      responses:
+        '200':
+          description: ユーザー詳細
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDetailResponse'
+        '404':
+          description: ユーザーが存在しない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /users/{userId}/interests:
+    post:
+      tags: [users]
+      summary: 気になるを送る
+      description: |
+        指定したユーザーに「気になる」を送る。
+        相手もすでに自分に気になるを送っていた場合は `matched` が true になる。
+      operationId: sendInterest
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: 気になるを送る対象のユーザー ID
+      responses:
+        '200':
+          description: 気になる送信成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InterestResponse'
+        '409':
+          description: すでに気になるを送信済み
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: ユーザーが存在しない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
   /users/pickup:
     get:
       tags: [users]
@@ -742,6 +814,47 @@ components:
         updatedAt:
           type: string
           format: date-time
+
+    UserDetailResponse:
+      type: object
+      properties:
+        userId:
+          type: integer
+          example: 42
+        name:
+          type: string
+          example: 田中太郎
+        bio:
+          type: string
+          nullable: true
+          example: 自己紹介が入ります
+        iconUrl:
+          type: string
+          nullable: true
+          description: プロフィールアイコン画像の URL
+          example: https://pub-xxx.r2.dev/icon/abc123.jpg
+        matchedTags:
+          type: array
+          items:
+            $ref: '#/components/schemas/TagResponse'
+          description: ログインユーザーと一致するタグの一覧
+        unmatchedTags:
+          type: array
+          items:
+            $ref: '#/components/schemas/TagResponse'
+          description: ログインユーザーと一致しないタグの一覧
+        isInterested:
+          type: boolean
+          description: ログインユーザーがすでに気になるを送っているかどうか
+          example: false
+
+    InterestResponse:
+      type: object
+      properties:
+        matched:
+          type: boolean
+          description: 相互に気になるが成立してマッチになったかどうか
+          example: false
 
     NewUsersResponse:
       type: object
