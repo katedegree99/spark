@@ -23,12 +23,14 @@ import type {
   ImageResponse,
   ListThingsParams,
   LoginRequest,
+  NewUsersResponse,
   OtpSentResponse,
   OtpVerifyRequest,
   PickupUsersResponse,
   ProfileCreateRequest,
   ProfileResponse,
   ProfileUpdateRequest,
+  RecommendUsersResponse,
   RefreshTokenRequest,
   RegisterRequest,
   ThingCreateRequest,
@@ -809,6 +811,161 @@ export const useCreateThing = <TError = Promise<UnauthorizedResponse | ErrorResp
   const swrFn = getCreateThingMutationFetcher(fetchOptions);
 
   const query = useSWRMutation(swrKey, swrFn, swrOptions)
+
+  return {
+    swrKey,
+    ...query
+  }
+}
+
+export type listNewUsersResponse200 = {
+  data: NewUsersResponse
+  status: 200
+}
+
+export type listNewUsersResponse401 = {
+  data: UnauthorizedResponse
+  status: 401
+}
+
+export type listNewUsersResponseSuccess = (listNewUsersResponse200) & {
+  headers: Headers;
+};
+export type listNewUsersResponseError = (listNewUsersResponse401) & {
+  headers: Headers;
+};
+
+export type listNewUsersResponse = (listNewUsersResponseSuccess | listNewUsersResponseError)
+
+export const getListNewUsersUrl = () => {
+
+
+
+
+  return `/users/new`
+}
+
+/**
+ * 登録日時が新しい順にユーザーを返す。
+ * ホーム画面の「新着」セクションに表示する。
+ * @summary 新着ユーザー一覧を取得する
+ */
+export const listNewUsers = async ( options?: RequestInit): Promise<listNewUsersResponse> => {
+
+  const res = await fetch(getListNewUsersUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: listNewUsersResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as listNewUsersResponse
+}
+
+
+
+
+export const getListNewUsersKey = () => [`/users/new`] as const;
+
+export type ListNewUsersQueryResult = NonNullable<Awaited<ReturnType<typeof listNewUsers>>>
+
+/**
+ * @summary 新着ユーザー一覧を取得する
+ */
+export const useListNewUsers = <TError = Promise<UnauthorizedResponse>>(
+   options?: { swr?:SWRConfiguration<Awaited<ReturnType<typeof listNewUsers>>, TError> & { swrKey?: Key, enabled?: boolean }, fetch?: RequestInit }
+) => {
+  const {swr: swrOptions, fetch: fetchOptions} = options ?? {}
+
+  const isEnabled = swrOptions?.enabled !== false
+  const swrKey = swrOptions?.swrKey ?? (() => isEnabled ? getListNewUsersKey() : null);
+  const swrFn = () => listNewUsers(fetchOptions)
+
+  const query = useSwr<Awaited<ReturnType<typeof swrFn>>, TError>(swrKey, swrFn, swrOptions)
+
+  return {
+    swrKey,
+    ...query
+  }
+}
+
+export type listRecommendUsersResponse200 = {
+  data: RecommendUsersResponse
+  status: 200
+}
+
+export type listRecommendUsersResponse401 = {
+  data: UnauthorizedResponse
+  status: 401
+}
+
+export type listRecommendUsersResponseSuccess = (listRecommendUsersResponse200) & {
+  headers: Headers;
+};
+export type listRecommendUsersResponseError = (listRecommendUsersResponse401) & {
+  headers: Headers;
+};
+
+export type listRecommendUsersResponse = (listRecommendUsersResponseSuccess | listRecommendUsersResponseError)
+
+export const getListRecommendUsersUrl = () => {
+
+
+
+
+  return `/users/recommend`
+}
+
+/**
+ * ログイン中ユーザーと共通のタグ（doing / want）が多い順に
+ * おすすめユーザーを返す。
+ * 共通タグ数・マッチタグ・未マッチタグを含む。
+ * @summary おすすめユーザー一覧を取得する
+ */
+export const listRecommendUsers = async ( options?: RequestInit): Promise<listRecommendUsersResponse> => {
+
+  const res = await fetch(getListRecommendUsersUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: listRecommendUsersResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as listRecommendUsersResponse
+}
+
+
+
+
+export const getListRecommendUsersKey = () => [`/users/recommend`] as const;
+
+export type ListRecommendUsersQueryResult = NonNullable<Awaited<ReturnType<typeof listRecommendUsers>>>
+
+/**
+ * @summary おすすめユーザー一覧を取得する
+ */
+export const useListRecommendUsers = <TError = Promise<UnauthorizedResponse>>(
+   options?: { swr?:SWRConfiguration<Awaited<ReturnType<typeof listRecommendUsers>>, TError> & { swrKey?: Key, enabled?: boolean }, fetch?: RequestInit }
+) => {
+  const {swr: swrOptions, fetch: fetchOptions} = options ?? {}
+
+  const isEnabled = swrOptions?.enabled !== false
+  const swrKey = swrOptions?.swrKey ?? (() => isEnabled ? getListRecommendUsersKey() : null);
+  const swrFn = () => listRecommendUsers(fetchOptions)
+
+  const query = useSwr<Awaited<ReturnType<typeof swrFn>>, TError>(swrKey, swrFn, swrOptions)
 
   return {
     swrKey,

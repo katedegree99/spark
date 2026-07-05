@@ -94,6 +94,19 @@ type LoginRequest struct {
 	Password string              `json:"password"`
 }
 
+// NewUserResponse defines model for NewUserResponse.
+type NewUserResponse struct {
+	// IconUrl プロフィールアイコン画像の URL
+	IconUrl *string `json:"iconUrl,omitempty"`
+	Name    *string `json:"name,omitempty"`
+	UserId  *int    `json:"userId,omitempty"`
+}
+
+// NewUsersResponse defines model for NewUsersResponse.
+type NewUsersResponse struct {
+	Users *[]NewUserResponse `json:"users,omitempty"`
+}
+
 // OtpSentResponse defines model for OtpSentResponse.
 type OtpSentResponse struct {
 	// ExpiresIn OTPの有効期限（秒）
@@ -116,12 +129,12 @@ type PickupUserResponse struct {
 	IconUrl *string `json:"iconUrl,omitempty"`
 
 	// MatchedTags ログインユーザーと一致するタグの一覧
-	MatchedTags *[]ThingResponse `json:"matchedTags,omitempty"`
-	Name        *string          `json:"name,omitempty"`
+	MatchedTags *[]TagResponse `json:"matchedTags,omitempty"`
+	Name        *string        `json:"name,omitempty"`
 
 	// UnmatchedTags ログインユーザーと一致しないタグの一覧
-	UnmatchedTags *[]ThingResponse `json:"unmatchedTags,omitempty"`
-	UserId        *int             `json:"userId,omitempty"`
+	UnmatchedTags *[]TagResponse `json:"unmatchedTags,omitempty"`
+	UserId        *int           `json:"userId,omitempty"`
 }
 
 // PickupUsersResponse defines model for PickupUsersResponse.
@@ -173,6 +186,30 @@ type ProfileUpdateRequest struct {
 	WantThingIds *[]int `json:"wantThingIds,omitempty"`
 }
 
+// RecommendUserResponse defines model for RecommendUserResponse.
+type RecommendUserResponse struct {
+	Bio *string `json:"bio,omitempty"`
+
+	// CommonCount ログインユーザーと共通のタグ数
+	CommonCount *int `json:"commonCount,omitempty"`
+
+	// IconUrl プロフィールアイコン画像の URL
+	IconUrl *string `json:"iconUrl,omitempty"`
+
+	// MatchedTags ログインユーザーと一致するタグの一覧
+	MatchedTags *[]TagResponse `json:"matchedTags,omitempty"`
+	Name        *string        `json:"name,omitempty"`
+
+	// UnmatchedTags ログインユーザーと一致しないタグの一覧
+	UnmatchedTags *[]TagResponse `json:"unmatchedTags,omitempty"`
+	UserId        *int           `json:"userId,omitempty"`
+}
+
+// RecommendUsersResponse defines model for RecommendUsersResponse.
+type RecommendUsersResponse struct {
+	Users *[]RecommendUserResponse `json:"users,omitempty"`
+}
+
 // RefreshTokenRequest defines model for RefreshTokenRequest.
 type RefreshTokenRequest struct {
 	RefreshToken string `json:"refreshToken"`
@@ -182,6 +219,12 @@ type RefreshTokenRequest struct {
 type RegisterRequest struct {
 	Email    openapi_types.Email `json:"email"`
 	Password string              `json:"password"`
+}
+
+// TagResponse defines model for TagResponse.
+type TagResponse struct {
+	Id   *int    `json:"id,omitempty"`
+	Name *string `json:"name,omitempty"`
 }
 
 // ThingCreateRequest defines model for ThingCreateRequest.
@@ -308,9 +351,15 @@ type ServerInterface interface {
 	// 新しい事柄を作成する
 	// (POST /things)
 	CreateThing(ctx echo.Context) error
+	// 新着ユーザー一覧を取得する
+	// (GET /users/new)
+	ListNewUsers(ctx echo.Context) error
 	// 今日のピックアップユーザー一覧を取得する
 	// (GET /users/pickup)
 	ListPickupUsers(ctx echo.Context) error
+	// おすすめユーザー一覧を取得する
+	// (GET /users/recommend)
+	ListRecommendUsers(ctx echo.Context) error
 }
 
 // ServerInterfaceWrapper converts echo contexts to parameters.
@@ -449,6 +498,15 @@ func (w *ServerInterfaceWrapper) CreateThing(ctx echo.Context) error {
 	return err
 }
 
+// ListNewUsers converts echo context to params.
+func (w *ServerInterfaceWrapper) ListNewUsers(ctx echo.Context) error {
+	var err error
+
+	// Invoke the callback with all the unmarshaled arguments
+	err = w.Handler.ListNewUsers(ctx)
+	return err
+}
+
 // ListPickupUsers converts echo context to params.
 func (w *ServerInterfaceWrapper) ListPickupUsers(ctx echo.Context) error {
 	var err error
@@ -457,6 +515,17 @@ func (w *ServerInterfaceWrapper) ListPickupUsers(ctx echo.Context) error {
 
 	// Invoke the callback with all the unmarshaled arguments
 	err = w.Handler.ListPickupUsers(ctx)
+	return err
+}
+
+// ListRecommendUsers converts echo context to params.
+func (w *ServerInterfaceWrapper) ListRecommendUsers(ctx echo.Context) error {
+	var err error
+
+	ctx.Set(string(BearerAuthScopes), []string{})
+
+	// Invoke the callback with all the unmarshaled arguments
+	err = w.Handler.ListRecommendUsers(ctx)
 	return err
 }
 
@@ -519,7 +588,9 @@ func RegisterHandlersWithOptions(router EchoRouter, si ServerInterface, options 
 	router.POST(options.BaseURL+"/profiles/me", wrapper.CreateMyProfile, options.OperationMiddlewares["createMyProfile"]...)
 	router.GET(options.BaseURL+"/things", wrapper.ListThings, options.OperationMiddlewares["listThings"]...)
 	router.POST(options.BaseURL+"/things", wrapper.CreateThing, options.OperationMiddlewares["createThing"]...)
+	router.GET(options.BaseURL+"/users/new", wrapper.ListNewUsers, options.OperationMiddlewares["listNewUsers"]...)
 	router.GET(options.BaseURL+"/users/pickup", wrapper.ListPickupUsers, options.OperationMiddlewares["listPickupUsers"]...)
+	router.GET(options.BaseURL+"/users/recommend", wrapper.ListRecommendUsers, options.OperationMiddlewares["listRecommendUsers"]...)
 
 }
 
@@ -1120,6 +1191,41 @@ func (response CreateThing422JSONResponse) VisitCreateThingResponse(w http.Respo
 	return err
 }
 
+type ListNewUsersRequestObject struct {
+}
+
+type ListNewUsersResponseObject interface {
+	VisitListNewUsersResponse(w http.ResponseWriter) error
+}
+
+type ListNewUsers200JSONResponse NewUsersResponse
+
+func (response ListNewUsers200JSONResponse) VisitListNewUsersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListNewUsers401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListNewUsers401JSONResponse) VisitListNewUsersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListPickupUsersRequestObject struct {
 }
 
@@ -1144,6 +1250,41 @@ func (response ListPickupUsers200JSONResponse) VisitListPickupUsersResponse(w ht
 type ListPickupUsers401JSONResponse struct{ UnauthorizedJSONResponse }
 
 func (response ListPickupUsers401JSONResponse) VisitListPickupUsersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListRecommendUsersRequestObject struct {
+}
+
+type ListRecommendUsersResponseObject interface {
+	VisitListRecommendUsersResponse(w http.ResponseWriter) error
+}
+
+type ListRecommendUsers200JSONResponse RecommendUsersResponse
+
+func (response ListRecommendUsers200JSONResponse) VisitListRecommendUsersResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListRecommendUsers401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListRecommendUsers401JSONResponse) VisitListRecommendUsersResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -1193,9 +1334,15 @@ type StrictServerInterface interface {
 	// 新しい事柄を作成する
 	// (POST /things)
 	CreateThing(ctx context.Context, request CreateThingRequestObject) (CreateThingResponseObject, error)
+	// 新着ユーザー一覧を取得する
+	// (GET /users/new)
+	ListNewUsers(ctx context.Context, request ListNewUsersRequestObject) (ListNewUsersResponseObject, error)
 	// 今日のピックアップユーザー一覧を取得する
 	// (GET /users/pickup)
 	ListPickupUsers(ctx context.Context, request ListPickupUsersRequestObject) (ListPickupUsersResponseObject, error)
+	// おすすめユーザー一覧を取得する
+	// (GET /users/recommend)
+	ListRecommendUsers(ctx context.Context, request ListRecommendUsersRequestObject) (ListRecommendUsersResponseObject, error)
 }
 
 type StrictHandlerFunc func(ctx echo.Context, request any) (any, error)
@@ -1548,6 +1695,29 @@ func (sh *strictHandler) CreateThing(ctx echo.Context) error {
 	return nil
 }
 
+// ListNewUsers operation middleware
+func (sh *strictHandler) ListNewUsers(ctx echo.Context) error {
+	var request ListNewUsersRequestObject
+
+	handler := func(ctx echo.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ListNewUsers(ctx.Request().Context(), request.(ListNewUsersRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListNewUsers")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return err
+	} else if validResponse, ok := response.(ListNewUsersResponseObject); ok {
+		return validResponse.VisitListNewUsersResponse(ctx.Response())
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
 // ListPickupUsers operation middleware
 func (sh *strictHandler) ListPickupUsers(ctx echo.Context) error {
 	var request ListPickupUsersRequestObject
@@ -1565,6 +1735,29 @@ func (sh *strictHandler) ListPickupUsers(ctx echo.Context) error {
 		return err
 	} else if validResponse, ok := response.(ListPickupUsersResponseObject); ok {
 		return validResponse.VisitListPickupUsersResponse(ctx.Response())
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// ListRecommendUsers operation middleware
+func (sh *strictHandler) ListRecommendUsers(ctx echo.Context) error {
+	var request ListRecommendUsersRequestObject
+
+	handler := func(ctx echo.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ListRecommendUsers(ctx.Request().Context(), request.(ListRecommendUsersRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListRecommendUsers")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return err
+	} else if validResponse, ok := response.(ListRecommendUsersResponseObject); ok {
+		return validResponse.VisitListRecommendUsersResponse(ctx.Response())
 	} else if response != nil {
 		return fmt.Errorf("unexpected response type: %T", response)
 	}

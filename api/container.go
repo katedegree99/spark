@@ -22,6 +22,7 @@ func NewContainer() *dig.Container {
 	c.Provide(infrarepo.NewThingRepository)
 	c.Provide(infrarepo.NewImageRepository)
 	c.Provide(infrarepo.NewPickupRepository)
+	c.Provide(infrarepo.NewNewUserRepository)
 	c.Provide(infraemail.NewResendEmailService)
 	c.Provide(infrar2.NewR2Service)
 	c.Provide(infrallm.NewClaudeAliasService)
@@ -32,6 +33,8 @@ func NewContainer() *dig.Container {
 	c.Provide(usecase.NewThingUsecase)
 	c.Provide(usecase.NewImageUsecase)
 	c.Provide(usecase.NewPickupUsecase)
+	c.Provide(usecase.NewNewUserUsecase)
+	c.Provide(usecase.NewRecommendUsecase)
 
 	// adapter
 	c.Provide(handler.NewAuthHandler)

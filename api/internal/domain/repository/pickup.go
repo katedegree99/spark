@@ -17,4 +17,6 @@ type PickupRepository interface {
 	FindCandidates(ctx context.Context, excludeUserID uint) ([]*PickupCandidateRecord, error)
 	FindCache(ctx context.Context, userID uint, date time.Time) ([]uint, error)
 	SaveCache(ctx context.Context, userID uint, date time.Time, pickedUserIDs []uint) error
+	FindShownUserIDs(ctx context.Context, userID uint) ([]uint, error)
+	SaveHistory(ctx context.Context, userID uint, shownUserIDs []uint) error
 }
