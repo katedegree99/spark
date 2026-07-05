@@ -285,6 +285,62 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationError'
 
+  /users:
+    get:
+      tags: [users]
+      summary: ユーザー一覧を取得する
+      description: |
+        登録済みユーザーの一覧を返す。
+        `q` を指定すると名前の前方一致で絞り込む。
+        `tagIds` を指定するとそのタグを持つユーザーに絞り込む（AND 条件）。
+      operationId: listUsers
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          required: false
+          schema:
+            type: string
+          description: 検索キーワード（名前の前方一致）
+          example: 田中
+        - name: tagIds
+          in: query
+          required: false
+          schema:
+            type: array
+            items:
+              type: integer
+          style: form
+          explode: true
+          description: 絞り込むタグ ID のリスト（AND 条件）
+          example: [1, 2]
+        - name: offset
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          description: 取得開始位置
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 20
+          description: 取得件数
+      responses:
+        '200':
+          description: ユーザー一覧
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecommendUsersResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
   /users/new:
     get:
       tags: [users]
