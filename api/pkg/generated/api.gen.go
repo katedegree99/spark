@@ -51,6 +51,24 @@ func (e UploadImageMultipartBodyDirectory) Valid() bool {
 	}
 }
 
+// Defines values for ListInterestsParamsDirection.
+const (
+	Received ListInterestsParamsDirection = "received"
+	Sent     ListInterestsParamsDirection = "sent"
+)
+
+// Valid indicates whether the value is a known member of the ListInterestsParamsDirection enum.
+func (e ListInterestsParamsDirection) Valid() bool {
+	switch e {
+	case Received:
+		return true
+	case Sent:
+		return true
+	default:
+		return false
+	}
+}
+
 // AuthTokensResponse defines model for AuthTokensResponse.
 type AuthTokensResponse struct {
 	AccessToken *string `json:"accessToken,omitempty"`
@@ -302,6 +320,21 @@ type UploadImageMultipartBody struct {
 // UploadImageMultipartBodyDirectory defines parameters for UploadImage.
 type UploadImageMultipartBodyDirectory string
 
+// ListInterestsParams defines parameters for ListInterests.
+type ListInterestsParams struct {
+	// Direction sent = 自分から送った / received = 相手から受け取った
+	Direction ListInterestsParamsDirection `form:"direction" json:"direction"`
+
+	// Offset 取得開始位置
+	Offset *int `form:"offset,omitempty" json:"offset,omitempty"`
+
+	// Limit 取得件数
+	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// ListInterestsParamsDirection defines parameters for ListInterests.
+type ListInterestsParamsDirection string
+
 // ListThingsParams defines parameters for ListThings.
 type ListThingsParams struct {
 	// Q 検索キーワード（前方一致）
@@ -376,6 +409,9 @@ type ServerInterface interface {
 	// 画像をアップロードする
 	// (POST /images)
 	UploadImage(ctx echo.Context) error
+	// 気になる一覧を取得する
+	// (GET /interests)
+	ListInterests(ctx echo.Context, params ListInterestsParams) error
 	// 自分のプロフィールを取得する
 	// (GET /profiles/me)
 	GetMyProfile(ctx echo.Context) error
@@ -480,6 +516,40 @@ func (w *ServerInterfaceWrapper) UploadImage(ctx echo.Context) error {
 
 	// Invoke the callback with all the unmarshaled arguments
 	err = w.Handler.UploadImage(ctx)
+	return err
+}
+
+// ListInterests converts echo context to params.
+func (w *ServerInterfaceWrapper) ListInterests(ctx echo.Context) error {
+	var err error
+
+	ctx.Set(string(BearerAuthScopes), []string{})
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListInterestsParams
+	// ------------- Required query parameter "direction" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "direction", ctx.QueryParams(), &params.Direction, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter direction: %s", err))
+	}
+
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "offset", ctx.QueryParams(), &params.Offset, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter offset: %s", err))
+	}
+
+	// ------------- Optional query parameter "limit" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", ctx.QueryParams(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		return echo.NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Invalid format for parameter limit: %s", err))
+	}
+
+	// Invoke the callback with all the unmarshaled arguments
+	err = w.Handler.ListInterests(ctx, params)
 	return err
 }
 
@@ -709,6 +779,7 @@ func RegisterHandlersWithOptions(router EchoRouter, si ServerInterface, options 
 	router.POST(options.BaseURL+"/auth/refresh", wrapper.RefreshToken, options.OperationMiddlewares["refreshToken"]...)
 	router.POST(options.BaseURL+"/auth/register", wrapper.RegisterWithEmail, options.OperationMiddlewares["registerWithEmail"]...)
 	router.POST(options.BaseURL+"/images", wrapper.UploadImage, options.OperationMiddlewares["uploadImage"]...)
+	router.GET(options.BaseURL+"/interests", wrapper.ListInterests, options.OperationMiddlewares["listInterests"]...)
 	router.GET(options.BaseURL+"/profiles/me", wrapper.GetMyProfile, options.OperationMiddlewares["getMyProfile"]...)
 	router.PATCH(options.BaseURL+"/profiles/me", wrapper.UpdateMyProfile, options.OperationMiddlewares["updateMyProfile"]...)
 	router.POST(options.BaseURL+"/profiles/me", wrapper.CreateMyProfile, options.OperationMiddlewares["createMyProfile"]...)
@@ -1039,6 +1110,42 @@ func (response UploadImage422JSONResponse) VisitUploadImageResponse(w http.Respo
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListInterestsRequestObject struct {
+	Params ListInterestsParams
+}
+
+type ListInterestsResponseObject interface {
+	VisitListInterestsResponse(w http.ResponseWriter) error
+}
+
+type ListInterests200JSONResponse RecommendUsersResponse
+
+func (response ListInterests200JSONResponse) VisitListInterestsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ListInterests401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response ListInterests401JSONResponse) VisitListInterestsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -1598,6 +1705,9 @@ type StrictServerInterface interface {
 	// 画像をアップロードする
 	// (POST /images)
 	UploadImage(ctx context.Context, request UploadImageRequestObject) (UploadImageResponseObject, error)
+	// 気になる一覧を取得する
+	// (GET /interests)
+	ListInterests(ctx context.Context, request ListInterestsRequestObject) (ListInterestsResponseObject, error)
 	// 自分のプロフィールを取得する
 	// (GET /profiles/me)
 	GetMyProfile(ctx context.Context, request GetMyProfileRequestObject) (GetMyProfileResponseObject, error)
@@ -1842,6 +1952,31 @@ func (sh *strictHandler) UploadImage(ctx echo.Context) error {
 		return err
 	} else if validResponse, ok := response.(UploadImageResponseObject); ok {
 		return validResponse.VisitUploadImageResponse(ctx.Response())
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// ListInterests operation middleware
+func (sh *strictHandler) ListInterests(ctx echo.Context, params ListInterestsParams) error {
+	var request ListInterestsRequestObject
+
+	request.Params = params
+
+	handler := func(ctx echo.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.ListInterests(ctx.Request().Context(), request.(ListInterestsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ListInterests")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return err
+	} else if validResponse, ok := response.(ListInterestsResponseObject); ok {
+		return validResponse.VisitListInterestsResponse(ctx.Response())
 	} else if response != nil {
 		return fmt.Errorf("unexpected response type: %T", response)
 	}

@@ -12,6 +12,8 @@ export * from './errorResponse';
 export * from './googleLoginRequest';
 export * from './imageResponse';
 export * from './interestResponse';
+export * from './listInterestsDirection';
+export * from './listInterestsParams';
 export * from './listThingsParams';
 export * from './listUsersParams';
 export * from './loginRequest';

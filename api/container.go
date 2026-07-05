@@ -40,6 +40,7 @@ func NewContainer() *dig.Container {
 	c.Provide(usecase.NewListUsersUsecase)
 	c.Provide(usecase.NewGetUserUsecase)
 	c.Provide(usecase.NewInterestUsecase)
+	c.Provide(usecase.NewListInterestsUsecase)
 
 	// adapter
 	c.Provide(handler.NewAuthHandler)
