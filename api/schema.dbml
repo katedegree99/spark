@@ -122,6 +122,19 @@ Table user_pickup_histories {
   Note: 'ピックアップで表示済みのユーザー履歴'
 }
 
+Table user_interests {
+  from_user_id bigint [not null]
+  to_user_id   bigint [not null]
+  created_at   datetime(3) [not null, default: `CURRENT_TIMESTAMP(3)`]
+
+  indexes {
+    (from_user_id, to_user_id) [pk]
+    to_user_id [name: "idx_user_interests_to_user_id"]
+  }
+
+  Note: 'ユーザーが別のユーザーに「気になる」を送った記録。相互に存在する場合がマッチ'
+}
+
 Ref fk_refresh_tokens_user: refresh_tokens.user_id > users.id [delete: cascade]
 Ref fk_thing_aliases_thing: thing_aliases.thing_id > things.id [delete: cascade]
 Ref fk_profiles_user: profiles.user_id > users.id [delete: cascade]
@@ -132,3 +145,5 @@ Ref fk_user_wants_user: user_wants.user_id > users.id [delete: cascade]
 Ref fk_user_wants_thing: user_wants.thing_id > things.id [delete: cascade]
 Ref fk_user_pickup_histories_user: user_pickup_histories.user_id > users.id [delete: cascade]
 Ref fk_user_pickup_histories_shown: user_pickup_histories.shown_user_id > users.id [delete: cascade]
+Ref fk_user_interests_from: user_interests.from_user_id > users.id [delete: cascade]
+Ref fk_user_interests_to: user_interests.to_user_id > users.id [delete: cascade]
