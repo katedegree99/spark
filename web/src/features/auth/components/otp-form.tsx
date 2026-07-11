@@ -14,6 +14,7 @@ import {
 	otpSchema,
 } from "@/features/auth/schema";
 import { useAuthFlowStore } from "@/features/auth/store";
+import { isNextRedirectError } from "@/utils/next-redirect";
 
 /**
  * 認証コード(OTP)入力フォーム。`"use client"`。
@@ -60,15 +61,23 @@ export function OtpForm() {
 		setFormError(null);
 		// 検証成功時、トークンの Cookie 保存と遷移(プロフィール設定済みなら /home、
 		// 未設定なら /profile/register)は Server Action 側で完結する(redirect)。
-		const result = await verifyOtpAction({ email: pendingEmail, code });
-		if (result?.ok === false) {
-			setFormError(result.message);
-			return;
+		// その redirect はクライアントでは promise の reject として届くため catch で拾う。
+		try {
+			const result = await verifyOtpAction({ email: pendingEmail, code });
+			if (result?.ok === false) {
+				setFormError(result.message);
+			}
+		} catch (err) {
+			if (!isNextRedirectError(err)) {
+				setFormError("認証に失敗しました。時間をおいて再度お試しください");
+				return;
+			}
+			// フロー完了(redirect = 検証成功)。一時状態(宛先メール)を破棄する
+			// (認証後に /otp へ戻っても使用済みコードのフォームを出さない)。
+			// ナビゲーションはルーターが実行済みのため reject は握りつぶしてよい。
+			completed.current = true;
+			setPendingEmail(null);
 		}
-		// フロー完了。一時状態(宛先メール)を破棄する(認証後に /otp へ戻っても
-		// 使用済みコードのフォームを出さない)。遷移は Server Action の redirect が担う。
-		completed.current = true;
-		setPendingEmail(null);
 	});
 
 	// sessionStorage 復元前、または宛先メール未保持(リダイレクト確定)の間は

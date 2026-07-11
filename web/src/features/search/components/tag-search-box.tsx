@@ -68,6 +68,9 @@ export function TagSearchBox({
 		pushTags([...selectedTags, tag]);
 		setQuery("");
 		setOpen(false);
+		// debounce 内の同一 query 再入力ではリセット effect が発火しないため、
+		// 選択時にもアクティブ候補を先頭へ戻す(範囲外 index の残留防止)。
+		setActiveIndex(0);
 	}
 
 	function onKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -78,13 +81,18 @@ export function TagSearchBox({
 		if (!dropdownVisible) return;
 		if (e.key === "ArrowDown" || e.key === "ArrowUp") {
 			e.preventDefault();
-			if (visibleSuggestions.length === 0) return;
+			// ロード中は「検索中…」しか見えておらず、不可視のステイル候補を
+			// 操作して範囲外 index を残さないよう無視する。
+			if (!isSettled || visibleSuggestions.length === 0) return;
 			const delta = e.key === "ArrowDown" ? 1 : -1;
-			setActiveIndex(
-				(prev) =>
-					(prev + delta + visibleSuggestions.length) %
-					visibleSuggestions.length,
-			);
+			const next =
+				(activeIndex + delta + visibleSuggestions.length) %
+				visibleSuggestions.length;
+			setActiveIndex(next);
+			// アクティブ候補が overflow スクロールの可視領域外に出たら追従させる。
+			document
+				.getElementById(`${listboxId}-opt-${visibleSuggestions[next].id}`)
+				?.scrollIntoView({ block: "nearest" });
 			return;
 		}
 		if (e.key === "Enter") {

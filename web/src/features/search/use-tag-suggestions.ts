@@ -46,11 +46,14 @@ export function useTagSuggestions(query: string): {
 		return () => clearTimeout(timer);
 	}, [query]);
 
-	const { data, isLoading } = useSWR(
+	const { data, isLoading, error } = useSWR(
 		debouncedQuery !== "" ? (["/api/things", debouncedQuery] as const) : null,
 		fetchSuggestions,
 		{ keepPreviousData: true },
 	);
 
-	return { suggestions: data ?? [], isLoading, debouncedQuery };
+	// エラー時は候補なしに倒す。keepPreviousData はエラー時も前 query の結果を
+	// data として返すため、そのまま出すと「現入力に対応した候補」に見えてしまう
+	// (ステイル候補の誤選択が error 経路で再発する)。
+	return { suggestions: error ? [] : (data ?? []), isLoading, debouncedQuery };
 }

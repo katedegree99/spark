@@ -8,6 +8,7 @@ import { createProfileAction } from "@/features/profile/actions";
 import { AvatarPicker } from "@/features/profile/components/avatar-picker";
 import { ThingTagInput } from "@/features/profile/components/thing-tag-input";
 import { type ProfileInput, profileSchema } from "@/features/profile/schema";
+import { isNextRedirectError } from "@/utils/next-redirect";
 
 /** ラベル + フィールド + エラー文言の縦並びラッパ。 */
 function Field({
@@ -55,15 +56,25 @@ export function ProfileRegisterForm() {
 
 	const onSubmit = handleSubmit(async (data) => {
 		setFormError(null);
-		const result = await createProfileAction({
-			name: data.name,
-			bio: data.bio,
-			doingThingIds: data.doings.map((d) => d.id),
-			wantThingIds: data.wants.map((w) => w.id),
-		});
-		// 成功時は createProfileAction 内で redirect 済み。戻るのは失敗時のみ。
-		if (result?.ok === false) {
-			setFormError(result.message);
+		// 成功時は createProfileAction 内の redirect("/home") で完結する。その redirect は
+		// クライアントでは promise の reject として届くため catch で拾って握りつぶす
+		// (ナビゲーションはルーターが実行済み)。戻り値を参照するのは失敗時のみ。
+		try {
+			const result = await createProfileAction({
+				name: data.name,
+				bio: data.bio,
+				doingThingIds: data.doings.map((d) => d.id),
+				wantThingIds: data.wants.map((w) => w.id),
+			});
+			if (result?.ok === false) {
+				setFormError(result.message);
+			}
+		} catch (err) {
+			if (!isNextRedirectError(err)) {
+				setFormError(
+					"プロフィールの作成に失敗しました。時間をおいて再度お試しください",
+				);
+			}
 		}
 	});
 

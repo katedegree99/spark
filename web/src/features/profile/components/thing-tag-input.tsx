@@ -40,6 +40,8 @@ export function ThingTagInput({
 }: Props) {
 	const [query, setQuery] = useState("");
 	const [suggestions, setSuggestions] = useState<ThingTag[]>([]);
+	// suggestions がどの query に対する結果か(null = まだどの入力にも対応していない)。
+	const [settledQuery, setSettledQuery] = useState<string | null>(null);
 	const [open, setOpen] = useState(false);
 	const [pending, setPending] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -50,15 +52,18 @@ export function ThingTagInput({
 	useEffect(() => {
 		if (!open) {
 			setSuggestions([]);
+			setSettledQuery(null);
 			return;
 		}
 		let cancelled = false;
+		const requestedQuery = query;
 		const timer = setTimeout(async () => {
-			const things = await searchThingsAction(query);
+			const things = await searchThingsAction(requestedQuery);
 			if (cancelled) return;
 			setSuggestions(
 				things.map(toTag).filter((t): t is ThingTag => t !== null),
 			);
+			setSettledQuery(requestedQuery);
 		}, 250);
 		return () => {
 			cancelled = true;
@@ -84,11 +89,14 @@ export function ThingTagInput({
 	const selectedIds = new Set(value.map((v) => v.id));
 	const filtered = suggestions.filter((s) => !selectedIds.has(s.id));
 	const trimmed = query.trim();
+	// suggestions が現在の入力に対応しているか(debounce 待ち・フェッチ中は false)。
+	// ステイルな候補での Enter 確定や、existsの誤判定による重複 POST /things を防ぐ。
+	const settled = settledQuery === query;
 	const exists =
 		suggestions.some((s) => s.name === trimmed) ||
 		value.some((v) => v.name === trimmed);
 	const atMax = value.length >= max;
-	const canCreate = trimmed.length > 0 && !exists && !atMax;
+	const canCreate = settled && trimmed.length > 0 && !exists && !atMax;
 
 	const openBox = () => {
 		setOpen(true);
@@ -184,6 +192,8 @@ export function ThingTagInput({
 								// IME 変換確定の Enter で誤選択・誤作成(POST /things)しないようガードする。
 								if (e.nativeEvent.isComposing) return;
 								e.preventDefault();
+								// 候補が現在の入力に追いつくまでは確定しない(前 query の候補の誤選択防止)。
+								if (!settled) return;
 								if (filtered[0]) add(filtered[0]);
 								else if (canCreate) create();
 							}

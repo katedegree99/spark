@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { GoogleButton } from "@/components/ui/google-button";
 import { googleLoginAction } from "@/features/auth/actions";
+import { useAuthFlowStore } from "@/features/auth/store";
+import { isNextRedirectError } from "@/utils/next-redirect";
 
 const CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 const GSI_SRC = "https://accounts.google.com/gsi/client";
@@ -70,21 +72,39 @@ function loadGsi(): Promise<void> {
 export function GoogleLoginButton({ label }: { label: string }) {
 	const wrapRef = useRef<HTMLDivElement>(null);
 	const overlayRef = useRef<HTMLDivElement>(null);
+	const setPendingEmail = useAuthFlowStore((s) => s.setPendingEmail);
 	const [error, setError] = useState<string | null>(null);
 
-	const onCredential = useCallback(async (res: CredentialResponse) => {
-		if (!res.credential) {
-			setError("Google 認証情報を取得できませんでした");
-			return;
-		}
-		setError(null);
-		// 成功時の Cookie 保存と遷移(プロフィール設定済みなら /home、未設定なら
-		// /profile/register)は Server Action 側で完結する(redirect)。ここに戻るのは失敗時のみ。
-		const result = await googleLoginAction(res.credential);
-		if (result?.ok === false) {
-			setError(result.message);
-		}
-	}, []);
+	const onCredential = useCallback(
+		async (res: CredentialResponse) => {
+			if (!res.credential) {
+				setError("Google 認証情報を取得できませんでした");
+				return;
+			}
+			setError(null);
+			// 成功時の Cookie 保存と遷移(プロフィール設定済みなら /home、未設定なら
+			// /profile/register)は Server Action 側で完結する(redirect)。その redirect は
+			// クライアントでは promise の reject として届くため catch で拾う。
+			try {
+				const result = await googleLoginAction(res.credential);
+				if (result?.ok === false) {
+					setError(result.message);
+				}
+			} catch (err) {
+				if (!isNextRedirectError(err)) {
+					setError(
+						"Google ログインに失敗しました。時間をおいて再度お試しください",
+					);
+					return;
+				}
+				// 認証成功(redirect)。メールフローの一時状態が残っていれば破棄する
+				// (メール入力 → 戻って Google ログイン、のケース)。ナビゲーションは
+				// ルーターが実行済みのため reject は握りつぶしてよい。
+				setPendingEmail(null);
+			}
+		},
+		[setPendingEmail],
+	);
 
 	useEffect(() => {
 		if (!CLIENT_ID) {
