@@ -1,5 +1,6 @@
 "use server";
 
+import { redirect } from "next/navigation";
 import { authErrorMessage } from "@/features/auth/errors";
 import {
 	type LoginInput,
@@ -121,7 +122,10 @@ export async function verifyOtpAction(input: {
 
 	if (res.ok) {
 		await setAuthCookies(res.data);
-		return { ok: true };
+		// Cookie セットと遷移を同一サーバ応答で行う。client 側で router.push すると
+		// 新しい Cookie が反映される前に /home の認証ガードが走り /login へ弾かれるため。
+		// 未設定ユーザー(profile_exists=false)はプロフィール設定画面へ送る。
+		redirect(res.data.profile_exists ? "/home" : "/profile/register");
 	}
 	return {
 		ok: false,
@@ -155,7 +159,8 @@ export async function googleLoginAction(
 
 	if (res.ok) {
 		await setAuthCookies(res.data);
-		return { ok: true };
+		// Cookie セットと遷移を同一サーバ応答で行う(理由は verifyOtpAction と同じ)。
+		redirect(res.data.profile_exists ? "/home" : "/profile/register");
 	}
 	return {
 		ok: false,

@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { GoogleButton } from "@/components/ui/google-button";
 import { googleLoginAction } from "@/features/auth/actions";
@@ -69,27 +68,23 @@ function loadGsi(): Promise<void> {
  * `NEXT_PUBLIC_GOOGLE_CLIENT_ID` 未設定時はボタンを disabled 表示にして無効化する。
  */
 export function GoogleLoginButton({ label }: { label: string }) {
-	const router = useRouter();
 	const wrapRef = useRef<HTMLDivElement>(null);
 	const overlayRef = useRef<HTMLDivElement>(null);
 	const [error, setError] = useState<string | null>(null);
 
-	const onCredential = useCallback(
-		async (res: CredentialResponse) => {
-			if (!res.credential) {
-				setError("Google 認証情報を取得できませんでした");
-				return;
-			}
-			setError(null);
-			const result = await googleLoginAction(res.credential);
-			if (!result.ok) {
-				setError(result.message);
-				return;
-			}
-			router.push("/home");
-		},
-		[router],
-	);
+	const onCredential = useCallback(async (res: CredentialResponse) => {
+		if (!res.credential) {
+			setError("Google 認証情報を取得できませんでした");
+			return;
+		}
+		setError(null);
+		// 成功時の Cookie 保存と /home への遷移は Server Action 側で完結する
+		// (redirect)。ここに戻るのは失敗時のみ。
+		const result = await googleLoginAction(res.credential);
+		if (result?.ok === false) {
+			setError(result.message);
+		}
+	}, []);
 
 	useEffect(() => {
 		if (!CLIENT_ID) {

@@ -135,6 +135,25 @@
 	}
 }
 
+/* 選択(フォーカス/オープン)中の入力エリアの枠線をブランドグラデにする。
+   padding-box を白で塗り、border-box にグラデを敷くことで角丸対応のグラデ枠を作る。
+   要素側で透明 border の「幅」を指定すると、その幅にグラデが見える。 */
+@utility border-gradient {
+	border-color: transparent;
+	/* padding-box は常に白で塗る(入力欄は白固定。ダークモードの --background=黒で
+	   背景が黒くならないよう #fff をハードコードする)。border-box にグラデを敷く。 */
+	background-image:
+		linear-gradient(#ffffff, #ffffff),
+		linear-gradient(
+			155.54deg,
+			var(--brand-yellow) 0.98%,
+			var(--brand-orange) 50%,
+			var(--brand-red) 99.02%
+		);
+	background-origin: border-box;
+	background-clip: padding-box, border-box;
+}
+
 @media (prefers-color-scheme: dark) {
 	:root {
 		--background: #0a0a0a;
