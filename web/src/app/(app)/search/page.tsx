@@ -1,4 +1,5 @@
 import { RecommendedCard } from "@/features/home/components/recommended-card";
+import { SelectedTagList } from "@/features/search/components/selected-tag-list";
 import { TagSearchBox } from "@/features/search/components/tag-search-box";
 import { searchUsers } from "@/features/search/data";
 import { parseTagsParam } from "@/features/search/search-params";
@@ -40,8 +41,19 @@ export default async function SearchPage({
 					</div>
 					<div className="-mt-[25px] relative z-10 px-5 md:mt-0 md:px-0">
 						<TagSearchBox selectedTags={selectedTags} />
+						{/* SP: チップは検索入力の直下 */}
+						<SelectedTagList
+							selectedTags={selectedTags}
+							className="mt-3 md:hidden"
+						/>
 					</div>
 				</div>
+				{/* PC: チップは見出し行の下に全幅で並べる(入力の右カラム内で
+				    折り返すとヘッダが縦に膨らみ「探す」が浮くため) */}
+				<SelectedTagList
+					selectedTags={selectedTags}
+					className="hidden px-5 pb-6 md:flex"
+				/>
 			</div>
 			<div className="flex-1 px-4 py-6 pb-24 transition-opacity md:bg-[#fafafa] md:px-10 md:pb-10 group-has-[[data-pending]]:opacity-60">
 				{!Array.isArray(result) ? (
