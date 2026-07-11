@@ -75,8 +75,8 @@ export function AvatarPicker() {
 								aria-hidden="true"
 							>
 								<title>アイコン未設定</title>
-								{/* 頭(r15)と、肩を表す大きめの円(上端=59)。頭下端(56)との間に
-								    3px ほどのネック隙間。肩は円縁で overflow-hidden にクリップされ、
+								{/* 頭(r17)と、肩を表す大きめの円(上端=59)。頭下端(57)との間に
+								    2px ほどのネック隙間。肩は円縁で overflow-hidden にクリップされ、
 								    肩先が円からはみ出して切れる Figma の見た目になる。 */}
 								<circle cx="50" cy="40" r="17" />
 								<circle cx="50" cy="95" r="36" />

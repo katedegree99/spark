@@ -30,7 +30,12 @@ export function SelectedTagList({
 				<SelectedTagChip
 					key={tag.id}
 					name={tag.name}
-					onRemove={() => pushTags(selectedTags.filter((t) => t.id !== tag.id))}
+					// 遷移中の連打を無視する。props の selectedTags は RSC 応答まで古いままの
+					// ため、続けて押すと 1 つ前の削除を巻き戻した URL を push してしまう。
+					onRemove={() => {
+						if (isPending) return;
+						pushTags(selectedTags.filter((t) => t.id !== tag.id));
+					}}
 				/>
 			))}
 		</div>

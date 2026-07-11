@@ -25,10 +25,11 @@ export type AuthActionResult =
 	| { ok: true; email: string }
 	| { ok: false; message: string };
 
-/** OTP 検証の戻り値。成功時はトークンを Cookie に保存済みなので追加データは不要。 */
-export type VerifyOtpActionResult =
-	| { ok: true }
-	| { ok: false; message: string };
+/**
+ * OTP 検証・Google ログインの戻り値。失敗時のみ返す(成功時はトークンを
+ * Cookie に保存し redirect で完結するため、値は返らない)。
+ */
+export type VerifyOtpActionResult = { ok: false; message: string };
 
 /**
  * メールアドレスで新規登録する Server Action。

@@ -65,6 +65,9 @@ export function TagSearchBox({
 	}, []);
 
 	function selectTag(tag: SelectedTag) {
+		// 遷移中の連続選択を無視する。props の selectedTags は RSC 応答まで古いままの
+		// ため、続けて選ぶと 1 つ前の選択を巻き戻した URL を push してしまう。
+		if (isPending) return;
 		pushTags([...selectedTags, tag]);
 		setQuery("");
 		setOpen(false);

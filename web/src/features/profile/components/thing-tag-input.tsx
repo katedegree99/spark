@@ -117,6 +117,9 @@ export function ThingTagInput({
 		onChange([...value, tag]);
 		setQuery("");
 		setSuggestions([]);
+		// suggestions を空にしたので settled も無効化する。残すと直後の同一 query
+		// 再入力で settled が即 true になり、exists の誤判定で create() が誤発火する。
+		setSettledQuery(null);
 		inputRef.current?.focus();
 	};
 
