@@ -67,11 +67,15 @@ export default async function SearchPage({
 							: "ユーザーが見つかりませんでした"}
 					</p>
 				) : (
-					<div className="grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-4">
+					/* カード間隔は Figma 準拠(SP: 20px = 179:5919 / PC: 16px = 179:6086)。
+					   home(recommended-section)と同じく ul/li の semantic list で並べる。 */
+					<ul className="grid grid-cols-1 gap-5 md:grid-cols-2 md:gap-4">
 						{result.map((user) => (
-							<RecommendedCard key={user.userId} user={user} />
+							<li key={user.userId}>
+								<RecommendedCard user={user} />
+							</li>
 						))}
-					</div>
+					</ul>
 				)}
 			</div>
 		</main>

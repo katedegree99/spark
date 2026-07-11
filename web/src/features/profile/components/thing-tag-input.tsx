@@ -145,7 +145,7 @@ export function ThingTagInput({
 						openBox();
 					}
 				}}
-				className={`flex min-h-[104px] w-full cursor-text flex-wrap content-start items-start gap-2 rounded-lg border bg-white p-4 ${open ? "border-gradient" : "border-border"}`}
+				className={`flex min-h-[104px] w-full cursor-text flex-wrap content-start items-start gap-2 rounded-lg border bg-white p-4 ${open ? "border-brand-gradient" : "border-border"}`}
 			>
 				{value.length === 0 ? (
 					<span className="text-base text-border">{placeholder}</span>
@@ -181,6 +181,8 @@ export function ThingTagInput({
 						onChange={(e) => setQuery(e.target.value)}
 						onKeyDown={(e) => {
 							if (e.key === "Enter") {
+								// IME 変換確定の Enter で誤選択・誤作成(POST /things)しないようガードする。
+								if (e.nativeEvent.isComposing) return;
 								e.preventDefault();
 								if (filtered[0]) add(filtered[0]);
 								else if (canCreate) create();

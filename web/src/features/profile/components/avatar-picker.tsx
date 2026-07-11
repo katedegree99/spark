@@ -13,7 +13,7 @@ const MAX_BYTES = 5 * 1024 * 1024; // 5MB
  * JPG/PNG・5MB までを検証する(Figma のキャプション準拠)。
  *
  * NOTE: R2 への実アップロード(POST /images)は未配線のため、現状は
- * ローカルプレビューのみ(icon_image_id は付与しない)。アップロード実装時に
+ * ローカルプレビューのみ(iconImageId は付与しない)。アップロード実装時に
  * 選択ファイルを送信し、返却 id をフォームへ渡す配線を追加する。
  */
 export function AvatarPicker() {

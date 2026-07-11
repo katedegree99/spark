@@ -63,7 +63,7 @@ function loadGsi(): Promise<void> {
  * 見た目は自前の {@link GoogleButton} を維持しつつ、その上に **透明な公式 GIS ボタン**
  * を重ねてクリックを拾い、ID トークンを取得する(オーバーレイ方式)。
  * 取得した `credential`(= id_token)を {@link googleLoginAction} に渡し、
- * 成功で `/home` へ遷移する。
+ * 成功でプロフィール設定済みなら `/home`、未設定なら `/profile/register` へ遷移する。
  *
  * `NEXT_PUBLIC_GOOGLE_CLIENT_ID` 未設定時はボタンを disabled 表示にして無効化する。
  */
@@ -78,8 +78,8 @@ export function GoogleLoginButton({ label }: { label: string }) {
 			return;
 		}
 		setError(null);
-		// 成功時の Cookie 保存と /home への遷移は Server Action 側で完結する
-		// (redirect)。ここに戻るのは失敗時のみ。
+		// 成功時の Cookie 保存と遷移(プロフィール設定済みなら /home、未設定なら
+		// /profile/register)は Server Action 側で完結する(redirect)。ここに戻るのは失敗時のみ。
 		const result = await googleLoginAction(res.credential);
 		if (result?.ok === false) {
 			setError(result.message);

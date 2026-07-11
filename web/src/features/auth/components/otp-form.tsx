@@ -3,7 +3,7 @@
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ChevronLeft, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import { OtpInput } from "@/components/ui/otp-input";
@@ -26,8 +26,12 @@ import { useAuthFlowStore } from "@/features/auth/store";
 export function OtpForm() {
 	const router = useRouter();
 	const pendingEmail = useAuthFlowStore((s) => s.pendingEmail);
+	const setPendingEmail = useAuthFlowStore((s) => s.setPendingEmail);
 	const hasHydrated = useAuthFlowStore((s) => s.hasHydrated);
 	const [formError, setFormError] = useState<string | null>(null);
+	// 検証成功済みフラグ。成功時は pendingEmail を破棄するが、それにより下の
+	// 「フロー外アクセス → /login」リダイレクトが誤発火しないよう抑止に使う。
+	const completed = useRef(false);
 
 	const {
 		control,
@@ -43,7 +47,7 @@ export function OtpForm() {
 	// sessionStorage からの復元完了(hasHydrated)を待ってから判定する
 	// (復元前は pendingEmail が null のため、待たないと誤って /login へ飛ぶ)。
 	useEffect(() => {
-		if (hasHydrated && !pendingEmail) {
+		if (hasHydrated && !pendingEmail && !completed.current) {
 			router.replace("/login");
 		}
 	}, [hasHydrated, pendingEmail, router]);
@@ -54,12 +58,17 @@ export function OtpForm() {
 			return;
 		}
 		setFormError(null);
-		// 検証成功時、トークンの Cookie 保存と /home への遷移は Server Action 側で
-		// 完結する(redirect)。ここに戻るのは失敗時のみなのでエラーだけ拾う。
+		// 検証成功時、トークンの Cookie 保存と遷移(プロフィール設定済みなら /home、
+		// 未設定なら /profile/register)は Server Action 側で完結する(redirect)。
 		const result = await verifyOtpAction({ email: pendingEmail, code });
 		if (result?.ok === false) {
 			setFormError(result.message);
+			return;
 		}
+		// フロー完了。一時状態(宛先メール)を破棄する(認証後に /otp へ戻っても
+		// 使用済みコードのフォームを出さない)。遷移は Server Action の redirect が担う。
+		completed.current = true;
+		setPendingEmail(null);
 	});
 
 	// sessionStorage 復元前、または宛先メール未保持(リダイレクト確定)の間は

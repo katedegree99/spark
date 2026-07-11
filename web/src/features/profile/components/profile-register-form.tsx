@@ -68,7 +68,7 @@ export function ProfileRegisterForm() {
 	});
 
 	const inputClass =
-		"w-full rounded-lg border border-border bg-white p-4 text-base text-ink outline-none transition-colors placeholder:text-border focus:border-gradient";
+		"w-full rounded-lg border border-border bg-white p-4 text-base text-ink outline-none transition-colors placeholder:text-border focus:border-brand-gradient";
 
 	return (
 		<form onSubmit={onSubmit} className="flex flex-col gap-5 pt-5 md:gap-8">

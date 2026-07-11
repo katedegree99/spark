@@ -4,7 +4,7 @@ import { z } from "zod";
  * プロフィール設定フォームのバリデーションスキーマ (zod v4)。
  *
  * OpenAPI (`schema/openapi/openapi.yaml`) の `ProfileCreateRequest` に準拠する。
- * `doing_thing_ids` / `want_thing_ids` は API 上は ID 配列だが、フォーム内部では
+ * `doingThingIds` / `wantThingIds` は API 上は ID 配列だが、フォーム内部では
  * 表示用に `{ id, name }` のタグとして保持し、送信時に ID へ写像する。
  * エラーメッセージは日本語。
  */

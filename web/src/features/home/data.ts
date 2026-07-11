@@ -31,7 +31,7 @@ import type {
 export type PickupError = { error: true };
 
 /** `matched`/`unmatched` のタグ群を VM 配列へ。id/name 欠落要素は除外する。 */
-export function toTagVMs(
+function toTagVMs(
 	matchedTags?: TagResponse[],
 	unmatchedTags?: TagResponse[],
 ): TagVM[] {
