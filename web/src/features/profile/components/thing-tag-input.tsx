@@ -115,11 +115,11 @@ export function ThingTagInput({
 		}
 		setError(null);
 		onChange([...value, tag]);
+		// suggestions はクリアしない。選択で候補一覧自体は変わらず(選択済みは
+		// filtered で除外される)、空クエリから選んだ場合は query が変化せず
+		// 再フェッチも走らないため、クリアすると候補が空のまま残ってしまう。
+		// suggestions と settledQuery を対で残すので exists の判定も正しいまま。
 		setQuery("");
-		setSuggestions([]);
-		// suggestions を空にしたので settled も無効化する。残すと直後の同一 query
-		// 再入力で settled が即 true になり、exists の誤判定で create() が誤発火する。
-		setSettledQuery(null);
 		inputRef.current?.focus();
 	};
 
