@@ -35,9 +35,9 @@ export async function createProfileAction(input: {
 	const payload: ProfileCreateRequest = {
 		name: input.name,
 		bio: input.bio ?? null,
-		icon_image_id: input.iconImageId ?? null,
-		doing_thing_ids: input.doingThingIds,
-		want_thing_ids: input.wantThingIds,
+		iconImageId: input.iconImageId ?? null,
+		doingThingIds: input.doingThingIds,
+		wantThingIds: input.wantThingIds,
 	};
 
 	const res = await apiFetch<ProfileResponse>(

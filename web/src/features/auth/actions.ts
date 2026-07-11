@@ -124,8 +124,8 @@ export async function verifyOtpAction(input: {
 		await setAuthCookies(res.data);
 		// Cookie セットと遷移を同一サーバ応答で行う。client 側で router.push すると
 		// 新しい Cookie が反映される前に /home の認証ガードが走り /login へ弾かれるため。
-		// 未設定ユーザー(profile_exists=false)はプロフィール設定画面へ送る。
-		redirect(res.data.profile_exists ? "/home" : "/profile/register");
+		// 未設定ユーザー(profileExists=false)はプロフィール設定画面へ送る。
+		redirect(res.data.profileExists ? "/home" : "/profile/register");
 	}
 	return {
 		ok: false,
@@ -160,7 +160,7 @@ export async function googleLoginAction(
 	if (res.ok) {
 		await setAuthCookies(res.data);
 		// Cookie セットと遷移を同一サーバ応答で行う(理由は verifyOtpAction と同じ)。
-		redirect(res.data.profile_exists ? "/home" : "/profile/register");
+		redirect(res.data.profileExists ? "/home" : "/profile/register");
 	}
 	return {
 		ok: false,

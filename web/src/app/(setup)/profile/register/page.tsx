@@ -5,8 +5,8 @@ import { ProfileSetupHeader } from "@/features/profile/components/profile-setup-
 /**
  * プロフィール初回設定画面(`/profile/register`)。
  *
- * OTP / Google 認証後、`profile_exists` が false のユーザーをここへ遷移させる。
- * 認証必須(`(app)/layout.tsx` の requireSession ガード配下)。
+ * OTP / Google 認証後、`profileExists` が false のユーザーをここへ遷移させる。
+ * 認証必須(`(setup)/layout.tsx` の requireSession ガード配下。アプリシェル無し)。
  *
  * レスポンシブ(auth 画面と同じ 2 カラム方針):
  * - SP(~md): 1 カラム。戻るボタン + 中央タイトルのヘッダー + フォーム
