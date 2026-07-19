@@ -1,19 +1,4 @@
 services:
-  app:
-    build: .
-    ports:
-      - "8080:8080"
-    env_file: .env
-    environment:
-      DB_HOST: db
-    volumes:
-      - .:/app
-      - go-cache:/root/go/pkg/mod
-    depends_on:
-      db:
-        condition: service_healthy
-    restart: unless-stopped
-
   db:
     image: mysql:8.0
     restart: unless-stopped
@@ -36,4 +21,3 @@ services:
 
 volumes:
   db-data:
-  go-cache:

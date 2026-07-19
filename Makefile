@@ -1,6 +1,6 @@
 .PHONY: up down restart web api logs schema doc mock generate db db-down db-reset
 
-NVM_NODE := $(HOME)/.nvm/versions/node/v24.16.0/bin
+export PATH := $(HOME)/.local/share/mise/shims:$(PATH)
 
 up: down
 	$(MAKE) -j4 api web doc mock
@@ -8,30 +8,27 @@ up: down
 down:
 	lsof -ti:3000 | xargs kill -9 2>/dev/null || true
 	lsof -ti:3001 | xargs kill -9 2>/dev/null || true
+	lsof -ti:8080 | xargs kill -9 2>/dev/null || true
 	lsof -ti:8081 | xargs kill -9 2>/dev/null || true
-	cd api && docker compose down 2>/dev/null || true
 
 web:
 	cd web && bun run dev
 
 api:
-	cd api && docker compose up --build -d app
-
-logs:
-	cd api && docker compose logs -f app
+	cd api && air
 
 doc:
-	cd schema && PATH="$(NVM_NODE):$$PATH" bun run preview
+	cd schema && bun run preview
 
 schema:
-	cd schema && PATH="$(NVM_NODE):$$PATH" bun run preview
+	cd schema && bun run preview
 
 mock:
-	cd schema && PATH="$(NVM_NODE):$$PATH" bun run mock
+	cd schema && bun run mock
 
 generate:
 	cd web && bun run generate
-	cd api && PATH="$$PATH:$$(go env GOPATH)/bin" oapi-codegen --config=oapi-codegen.yaml ../schema/openapi/openapi.yaml
+	cd api && oapi-codegen --config=oapi-codegen.yaml ../schema/openapi/openapi.yaml
 
 db:
 	cd api && docker compose up -d db
