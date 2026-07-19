@@ -1,5 +1,6 @@
 "use server";
 
+import { redirect } from "next/navigation";
 import { authErrorMessage } from "@/features/auth/errors";
 import {
 	type LoginInput,
@@ -24,10 +25,11 @@ export type AuthActionResult =
 	| { ok: true; email: string }
 	| { ok: false; message: string };
 
-/** OTP 検証の戻り値。成功時はトークンを Cookie に保存済みなので追加データは不要。 */
-export type VerifyOtpActionResult =
-	| { ok: true }
-	| { ok: false; message: string };
+/**
+ * OTP 検証・Google ログインの戻り値。失敗時のみ返す(成功時はトークンを
+ * Cookie に保存し redirect で完結するため、値は返らない)。
+ */
+export type VerifyOtpActionResult = { ok: false; message: string };
 
 /**
  * メールアドレスで新規登録する Server Action。
@@ -121,7 +123,10 @@ export async function verifyOtpAction(input: {
 
 	if (res.ok) {
 		await setAuthCookies(res.data);
-		return { ok: true };
+		// Cookie セットと遷移を同一サーバ応答で行う。client 側で router.push すると
+		// 新しい Cookie が反映される前に /home の認証ガードが走り /login へ弾かれるため。
+		// 未設定ユーザー(profileExists=false)はプロフィール設定画面へ送る。
+		redirect(res.data.profileExists ? "/home" : "/profile/register");
 	}
 	return {
 		ok: false,
@@ -155,7 +160,8 @@ export async function googleLoginAction(
 
 	if (res.ok) {
 		await setAuthCookies(res.data);
-		return { ok: true };
+		// Cookie セットと遷移を同一サーバ応答で行う(理由は verifyOtpAction と同じ)。
+		redirect(res.data.profileExists ? "/home" : "/profile/register");
 	}
 	return {
 		ok: false,

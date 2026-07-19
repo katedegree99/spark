@@ -8,7 +8,8 @@ import { NAV_ITEMS } from "../nav-items";
 /**
  * PC 左サイドバーのナビ本体(Client、Figma 準拠)。
  * アクティブ項目は文字・アイコンをブランドグラデにする(背景塗りはしない)。
- * `enabled:false` の項目は遷移させず非活性表示にする。
+ * `enabled:false` の項目は遷移だけ止め、見た目は有効項目と同じにする
+ * (Figma に非活性表示は無く、全ページ実装後はこの区別自体が消えるため)。
  */
 export function SidebarNav() {
 	const pathname = usePathname();
@@ -28,7 +29,7 @@ export function SidebarNav() {
 							className={cn(
 								"flex items-center gap-5 rounded-xl p-3 font-bold text-xl tracking-wide",
 								active ? "text-brand-orange" : "text-ink",
-								!enabled && "pointer-events-none opacity-60",
+								!enabled && "pointer-events-none",
 							)}
 						>
 							{/* 40px 描画では viewBox 拡大で線が太く見えるため細めに指定する */}

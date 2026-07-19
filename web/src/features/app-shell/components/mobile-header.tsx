@@ -1,8 +1,12 @@
 "use client";
 
 import { Bell } from "lucide-react";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/utils/cn";
+
+/** 独自ヘッダを持つため共通ヘッダを出さないパス。 */
+const HIDDEN_PATHS = ["/search"];
 
 /**
  * SP 上部のグラデヘッダ(Client、Figma 準拠)。
@@ -11,6 +15,7 @@ import { cn } from "@/utils/cn";
  *
  * 下スクロールで隠し、上スワイプで自然に出す(オートハイド)。常時 sticky top-0 で
  * 残すと下のグラデカードと色が被るため、隠す + 影で背景から分離する。
+ * `HIDDEN_PATHS` のページ(独自のグラデ検索ヘッダを持つ /search 等)では描画しない。
  */
 export function MobileHeader({
 	className,
@@ -19,6 +24,7 @@ export function MobileHeader({
 	className?: string;
 	notificationCount?: number;
 }) {
+	const pathname = usePathname();
 	const hasNotification = notificationCount > 0;
 	const badgeLabel = notificationCount > 99 ? "99+" : String(notificationCount);
 
@@ -67,6 +73,9 @@ export function MobileHeader({
 			if (subscribed) window.removeEventListener("scroll", onScroll);
 		};
 	}, []);
+
+	// フック呼び出しの順序を保つため、非表示判定は必ず全フックの後で行う。
+	if (HIDDEN_PATHS.includes(pathname)) return null;
 
 	return (
 		<header

@@ -72,7 +72,7 @@ function toNewArrivalVM(user: NewUserResponse): NewArrivalVM | null {
 }
 
 /** おすすめユーザーを VM に変換する。userId 欠落要素は除外(null を返す)。 */
-function toRecommendedUserVM(
+export function toRecommendedUserVM(
 	user: RecommendUserResponse,
 ): RecommendedUserVM | null {
 	if (user.userId == null) return null;

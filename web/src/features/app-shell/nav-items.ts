@@ -15,7 +15,7 @@ export type NavItem = {
 /**
  * ナビゲーション項目の定義(PC サイドバー / SP 下部タブ共用)。
  * 並び順はサイドバー基準(ホーム → 探す → 気になる → マイページ → 通知)。
- * 今回はホームのみ実装。それ以外は遷移先を作らないため `enabled: false`。
+ * 実装済みはホームと探すのみ。それ以外は遷移先を作らないため `enabled: false`。
  */
 export const NAV_ITEMS: NavItem[] = [
 	{ href: "/home", label: "ホーム", icon: Home, enabled: true },
@@ -24,7 +24,7 @@ export const NAV_ITEMS: NavItem[] = [
 		label: "探す",
 		tabLabel: "検索",
 		icon: Search,
-		enabled: false,
+		enabled: true,
 	},
 	{ href: "/likes", label: "気になる", icon: Heart, enabled: false },
 	{
