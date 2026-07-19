@@ -9,4 +9,9 @@
 export interface InterestResponse {
   /** 相互に気になるが成立してマッチになったかどうか */
   matched?: boolean;
+  /**
+     * マッチ成立時に自動作成されたDMルームのID。matched=false の場合は null
+     * @nullable
+     */
+  roomId?: number | null;
 }

@@ -8,7 +8,7 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 )
 
-func NewRouter(h *handler.Handler) *echo.Echo {
+func NewRouter(h *handler.Handler, hub *handler.WsHub) *echo.Echo {
 	e := echo.New()
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
@@ -17,6 +17,9 @@ func NewRouter(h *handler.Handler) *echo.Echo {
 		jwtMiddlewareAdapter(authmw.JWTAuth()),
 	})
 	generated.RegisterHandlers(e, strict)
+
+	e.GET("/ws/rooms", hub.HandleRoomsWS)
+	e.GET("/ws/rooms/:roomId", hub.HandleRoomWS)
 
 	return e
 }
@@ -37,6 +40,7 @@ func jwtMiddlewareAdapter(mw echo.MiddlewareFunc) generated.StrictMiddlewareFunc
 		"GetUser":            true,
 		"SendInterest":       true,
 		"ListInterests":      true,
+		"SendMessage":        true,
 	}
 	return func(f generated.StrictHandlerFunc, operationID string) generated.StrictHandlerFunc {
 		if !protected[operationID] {

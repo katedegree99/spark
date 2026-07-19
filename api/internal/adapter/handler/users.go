@@ -303,9 +303,12 @@ func (h *UsersHandler) SendInterest(ctx context.Context, request generated.SendI
 		return nil, err
 	}
 
-	return generated.SendInterest200JSONResponse{
-		Matched: &result.Matched,
-	}, nil
+	resp := generated.SendInterest200JSONResponse{Matched: &result.Matched}
+	if result.RoomID != nil {
+		roomID := int(*result.RoomID)
+		resp.RoomId = &roomID
+	}
+	return resp, nil
 }
 
 func (h *UsersHandler) ListInterests(ctx context.Context, request generated.ListInterestsRequestObject) (generated.ListInterestsResponseObject, error) {

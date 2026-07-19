@@ -52,7 +52,7 @@ func newTestEcho(uc usecase.AuthUsecase) *echo.Echo {
 	h := &handler.Handler{
 		AuthHandler: handler.NewAuthHandler(uc),
 	}
-	return router.NewRouter(h)
+	return router.NewRouter(h, handler.NewWsHub())
 }
 
 const testJWTSecret = "test-secret"

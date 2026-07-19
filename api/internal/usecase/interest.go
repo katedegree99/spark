@@ -11,6 +11,7 @@ var ErrAlreadyInterested = errors.New("already interested")
 
 type SendInterestResult struct {
 	Matched bool
+	RoomID  *uint
 }
 
 type InterestUsecase interface {
@@ -20,15 +21,18 @@ type InterestUsecase interface {
 type interestUsecase struct {
 	interestRepo repository.InterestRepository
 	profileRepo  repository.ProfileRepository
+	roomRepo     repository.RoomRepository
 }
 
 func NewInterestUsecase(
 	interestRepo repository.InterestRepository,
 	profileRepo repository.ProfileRepository,
+	roomRepo repository.RoomRepository,
 ) InterestUsecase {
 	return &interestUsecase{
 		interestRepo: interestRepo,
 		profileRepo:  profileRepo,
+		roomRepo:     roomRepo,
 	}
 }
 
@@ -60,6 +64,20 @@ func (u *interestUsecase) SendInterest(ctx context.Context, fromUserID, toUserID
 	if err != nil {
 		return nil, err
 	}
+	if !matched {
+		return &SendInterestResult{Matched: false}, nil
+	}
 
-	return &SendInterestResult{Matched: matched}, nil
+	// マッチ成立：ルームが未作成なら作成する
+	room, err := u.roomRepo.FindByUsers(ctx, fromUserID, toUserID)
+	if err != nil {
+		return nil, err
+	}
+	if room == nil {
+		room, err = u.roomRepo.Create(ctx, fromUserID, toUserID)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return &SendInterestResult{Matched: true, RoomID: &room.ID}, nil
 }

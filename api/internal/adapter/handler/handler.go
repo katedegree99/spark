@@ -6,6 +6,7 @@ import "github.com/katedegree99/spark/api/pkg/generated"
 type Handler struct {
 	*AuthHandler
 	*HealthHandler
+	*MessageHandler
 	*ImageHandler
 	*ProfileHandler
 	*ThingHandler

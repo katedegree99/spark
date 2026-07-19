@@ -54,7 +54,7 @@ func newTestEchoWithUsers(pickup usecase.PickupUsecase, newUser usecase.NewUserU
 	h := &handler.Handler{
 		UsersHandler: handler.NewUsersHandler(pickup, newUser, recommend, nil, nil, nil, nil),
 	}
-	return router.NewRouter(h)
+	return router.NewRouter(h, handler.NewWsHub())
 }
 
 // --- GET /users/pickup ---
