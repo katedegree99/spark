@@ -19,8 +19,29 @@ tags:
     description: プロフィール
   - name: users
     description: ユーザー
+  - name: health
+    description: ヘルスチェック
 
 paths:
+  /health:
+    get:
+      tags: [health]
+      summary: ヘルスチェック
+      operationId: healthCheck
+      responses:
+        '200':
+          description: サービス正常
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+        '503':
+          description: DBに接続できない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
   /auth/register:
     post:
       tags: [auth]
@@ -625,6 +646,14 @@ components:
             $ref: '#/components/schemas/ValidationErrorResponse'
 
   schemas:
+    HealthResponse:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          example: ok
+
     RegisterRequest:
       type: object
       required: [email, password]

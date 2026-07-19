@@ -135,6 +135,38 @@ Table user_interests {
   Note: 'ユーザーが別のユーザーに「気になる」を送った記録。相互に存在する場合がマッチ'
 }
 
+Table rooms {
+  id         bigint [pk, increment, not null]
+  created_at datetime(3) [not null, default: `CURRENT_TIMESTAMP(3)`]
+
+  Note: 'DMルーム。現状は2ユーザー間のみだが room_users で参加者を管理することで拡張可能'
+}
+
+Table room_users {
+  room_id    bigint [not null]
+  user_id    bigint [not null]
+  created_at datetime(3) [not null, default: `CURRENT_TIMESTAMP(3)`]
+
+  indexes {
+    (room_id, user_id) [pk]
+    user_id [name: "idx_room_users_user_id"]
+  }
+
+  Note: 'ルームの参加者。ルーム作成前にアプリ層で相互 user_interests を確認する'
+}
+
+Table messages {
+  id             bigint [pk, increment, not null]
+  room_id        bigint [not null]
+  sender_user_id bigint [not null]
+  content        text [not null]
+  created_at     datetime(3) [not null, default: `CURRENT_TIMESTAMP(3)`]
+
+  indexes {
+    room_id [name: "idx_messages_room_id"]
+  }
+}
+
 Ref fk_refresh_tokens_user: refresh_tokens.user_id > users.id [delete: cascade]
 Ref fk_thing_aliases_thing: thing_aliases.thing_id > things.id [delete: cascade]
 Ref fk_profiles_user: profiles.user_id > users.id [delete: cascade]
@@ -147,3 +179,7 @@ Ref fk_user_pickup_histories_user: user_pickup_histories.user_id > users.id [del
 Ref fk_user_pickup_histories_shown: user_pickup_histories.shown_user_id > users.id [delete: cascade]
 Ref fk_user_interests_from: user_interests.from_user_id > users.id [delete: cascade]
 Ref fk_user_interests_to: user_interests.to_user_id > users.id [delete: cascade]
+Ref fk_room_users_room: room_users.room_id > rooms.id [delete: cascade]
+Ref fk_room_users_user: room_users.user_id > users.id [delete: cascade]
+Ref fk_messages_room: messages.room_id > rooms.id [delete: cascade]
+Ref fk_messages_sender: messages.sender_user_id > users.id [delete: cascade]

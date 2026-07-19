@@ -44,12 +44,14 @@ func NewContainer() *dig.Container {
 
 	// adapter
 	c.Provide(handler.NewAuthHandler)
+	c.Provide(handler.NewHealthHandler)
 	c.Provide(handler.NewProfileHandler)
 	c.Provide(handler.NewThingHandler)
 	c.Provide(handler.NewImageHandler)
 	c.Provide(handler.NewUsersHandler)
 	c.Provide(func(
 		auth *handler.AuthHandler,
+		health *handler.HealthHandler,
 		image *handler.ImageHandler,
 		profile *handler.ProfileHandler,
 		thing *handler.ThingHandler,
@@ -57,6 +59,7 @@ func NewContainer() *dig.Container {
 	) *handler.Handler {
 		return &handler.Handler{
 			AuthHandler:    auth,
+			HealthHandler:  health,
 			ImageHandler:   image,
 			ProfileHandler: profile,
 			ThingHandler:   thing,

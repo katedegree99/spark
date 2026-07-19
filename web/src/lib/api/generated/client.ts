@@ -21,6 +21,7 @@ import type {
   AuthTokensResponse,
   ErrorResponse,
   GoogleLoginRequest,
+  HealthResponse,
   ImageResponse,
   InterestResponse,
   ListInterestsParams,
@@ -45,6 +46,81 @@ import type {
   UserDetailResponse,
   ValidationErrorResponse
 } from './model';
+
+export type healthCheckResponse200 = {
+  data: HealthResponse
+  status: 200
+}
+
+export type healthCheckResponse503 = {
+  data: ErrorResponse
+  status: 503
+}
+
+export type healthCheckResponseSuccess = (healthCheckResponse200) & {
+  headers: Headers;
+};
+export type healthCheckResponseError = (healthCheckResponse503) & {
+  headers: Headers;
+};
+
+export type healthCheckResponse = (healthCheckResponseSuccess | healthCheckResponseError)
+
+export const getHealthCheckUrl = () => {
+
+
+
+
+  return `/health`
+}
+
+/**
+ * @summary ヘルスチェック
+ */
+export const healthCheck = async ( options?: RequestInit): Promise<healthCheckResponse> => {
+
+  const res = await fetch(getHealthCheckUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: healthCheckResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as healthCheckResponse
+}
+
+
+
+
+export const getHealthCheckKey = () => [`/health`] as const;
+
+export type HealthCheckQueryResult = NonNullable<Awaited<ReturnType<typeof healthCheck>>>
+
+/**
+ * @summary ヘルスチェック
+ */
+export const useHealthCheck = <TError = Promise<ErrorResponse>>(
+   options?: { swr?:SWRConfiguration<Awaited<ReturnType<typeof healthCheck>>, TError> & { swrKey?: Key, enabled?: boolean }, fetch?: RequestInit }
+) => {
+  const {swr: swrOptions, fetch: fetchOptions} = options ?? {}
+
+  const isEnabled = swrOptions?.enabled !== false
+  const swrKey = swrOptions?.swrKey ?? (() => isEnabled ? getHealthCheckKey() : null);
+  const swrFn = () => healthCheck(fetchOptions)
+
+  const query = useSwr<Awaited<ReturnType<typeof swrFn>>, TError>(swrKey, swrFn, swrOptions)
+
+  return {
+    swrKey,
+    ...query
+  }
+}
 
 export type registerWithEmailResponse200 = {
   data: OtpSentResponse

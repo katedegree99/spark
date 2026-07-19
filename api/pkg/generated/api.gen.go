@@ -98,6 +98,11 @@ type GoogleLoginRequest struct {
 	IdToken string `json:"idToken"`
 }
 
+// HealthResponse defines model for HealthResponse.
+type HealthResponse struct {
+	Status string `json:"status"`
+}
+
 // ImageResponse defines model for ImageResponse.
 type ImageResponse struct {
 	CreatedAt *time.Time `json:"createdAt,omitempty"`
@@ -406,6 +411,9 @@ type ServerInterface interface {
 	// メールアドレスで新規登録
 	// (POST /auth/register)
 	RegisterWithEmail(ctx echo.Context) error
+	// ヘルスチェック
+	// (GET /health)
+	HealthCheck(ctx echo.Context) error
 	// 画像をアップロードする
 	// (POST /images)
 	UploadImage(ctx echo.Context) error
@@ -505,6 +513,15 @@ func (w *ServerInterfaceWrapper) RegisterWithEmail(ctx echo.Context) error {
 
 	// Invoke the callback with all the unmarshaled arguments
 	err = w.Handler.RegisterWithEmail(ctx)
+	return err
+}
+
+// HealthCheck converts echo context to params.
+func (w *ServerInterfaceWrapper) HealthCheck(ctx echo.Context) error {
+	var err error
+
+	// Invoke the callback with all the unmarshaled arguments
+	err = w.Handler.HealthCheck(ctx)
 	return err
 }
 
@@ -778,6 +795,7 @@ func RegisterHandlersWithOptions(router EchoRouter, si ServerInterface, options 
 	router.POST(options.BaseURL+"/auth/otp/verify", wrapper.VerifyOtp, options.OperationMiddlewares["verifyOtp"]...)
 	router.POST(options.BaseURL+"/auth/refresh", wrapper.RefreshToken, options.OperationMiddlewares["refreshToken"]...)
 	router.POST(options.BaseURL+"/auth/register", wrapper.RegisterWithEmail, options.OperationMiddlewares["registerWithEmail"]...)
+	router.GET(options.BaseURL+"/health", wrapper.HealthCheck, options.OperationMiddlewares["healthCheck"]...)
 	router.POST(options.BaseURL+"/images", wrapper.UploadImage, options.OperationMiddlewares["uploadImage"]...)
 	router.GET(options.BaseURL+"/interests", wrapper.ListInterests, options.OperationMiddlewares["listInterests"]...)
 	router.GET(options.BaseURL+"/profiles/me", wrapper.GetMyProfile, options.OperationMiddlewares["getMyProfile"]...)
@@ -1060,6 +1078,41 @@ func (response RegisterWithEmail422JSONResponse) VisitRegisterWithEmailResponse(
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(422)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type HealthCheckRequestObject struct {
+}
+
+type HealthCheckResponseObject interface {
+	VisitHealthCheckResponse(w http.ResponseWriter) error
+}
+
+type HealthCheck200JSONResponse HealthResponse
+
+func (response HealthCheck200JSONResponse) VisitHealthCheckResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type HealthCheck503JSONResponse ErrorResponse
+
+func (response HealthCheck503JSONResponse) VisitHealthCheckResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -1702,6 +1755,9 @@ type StrictServerInterface interface {
 	// メールアドレスで新規登録
 	// (POST /auth/register)
 	RegisterWithEmail(ctx context.Context, request RegisterWithEmailRequestObject) (RegisterWithEmailResponseObject, error)
+	// ヘルスチェック
+	// (GET /health)
+	HealthCheck(ctx context.Context, request HealthCheckRequestObject) (HealthCheckResponseObject, error)
 	// 画像をアップロードする
 	// (POST /images)
 	UploadImage(ctx context.Context, request UploadImageRequestObject) (UploadImageResponseObject, error)
@@ -1923,6 +1979,29 @@ func (sh *strictHandler) RegisterWithEmail(ctx echo.Context) error {
 		return err
 	} else if validResponse, ok := response.(RegisterWithEmailResponseObject); ok {
 		return validResponse.VisitRegisterWithEmailResponse(ctx.Response())
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// HealthCheck operation middleware
+func (sh *strictHandler) HealthCheck(ctx echo.Context) error {
+	var request HealthCheckRequestObject
+
+	handler := func(ctx echo.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.HealthCheck(ctx.Request().Context(), request.(HealthCheckRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "HealthCheck")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return err
+	} else if validResponse, ok := response.(HealthCheckResponseObject); ok {
+		return validResponse.VisitHealthCheckResponse(ctx.Response())
 	} else if response != nil {
 		return fmt.Errorf("unexpected response type: %T", response)
 	}

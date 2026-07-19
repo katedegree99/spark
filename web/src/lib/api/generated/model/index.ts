@@ -10,6 +10,7 @@ export * from './authTokensResponse';
 export * from './authTokensResponseTokenType';
 export * from './errorResponse';
 export * from './googleLoginRequest';
+export * from './healthResponse';
 export * from './imageResponse';
 export * from './interestResponse';
 export * from './listInterestsDirection';
