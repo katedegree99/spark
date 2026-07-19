@@ -25,6 +25,8 @@ func NewContainer() *dig.Container {
 	c.Provide(infrarepo.NewNewUserRepository)
 	c.Provide(infrarepo.NewUserRepository)
 	c.Provide(infrarepo.NewInterestRepository)
+	c.Provide(infrarepo.NewRoomRepository)
+	c.Provide(infrarepo.NewMessageRepository)
 	c.Provide(infraemail.NewResendEmailService)
 	c.Provide(infrar2.NewR2Service)
 	c.Provide(infrallm.NewClaudeAliasService)
@@ -40,11 +42,14 @@ func NewContainer() *dig.Container {
 	c.Provide(usecase.NewListUsersUsecase)
 	c.Provide(usecase.NewGetUserUsecase)
 	c.Provide(usecase.NewInterestUsecase)
+	c.Provide(usecase.NewSendMessageUsecase)
 	c.Provide(usecase.NewListInterestsUsecase)
 
 	// adapter
 	c.Provide(handler.NewAuthHandler)
 	c.Provide(handler.NewHealthHandler)
+	c.Provide(handler.NewMessageHandler)
+	c.Provide(handler.NewWsHub)
 	c.Provide(handler.NewProfileHandler)
 	c.Provide(handler.NewThingHandler)
 	c.Provide(handler.NewImageHandler)
@@ -52,6 +57,7 @@ func NewContainer() *dig.Container {
 	c.Provide(func(
 		auth *handler.AuthHandler,
 		health *handler.HealthHandler,
+		message *handler.MessageHandler,
 		image *handler.ImageHandler,
 		profile *handler.ProfileHandler,
 		thing *handler.ThingHandler,
@@ -60,6 +66,7 @@ func NewContainer() *dig.Container {
 		return &handler.Handler{
 			AuthHandler:    auth,
 			HealthHandler:  health,
+			MessageHandler: message,
 			ImageHandler:   image,
 			ProfileHandler: profile,
 			ThingHandler:   thing,

@@ -115,12 +115,25 @@ type ImageResponse struct {
 type InterestResponse struct {
 	// Matched 相互に気になるが成立してマッチになったかどうか
 	Matched *bool `json:"matched,omitempty"`
+
+	// RoomId マッチ成立時に自動作成されたDMルームのID。matched=false の場合は null
+	RoomId *int `json:"roomId,omitempty"`
 }
 
 // LoginRequest defines model for LoginRequest.
 type LoginRequest struct {
 	Email    openapi_types.Email `json:"email"`
 	Password string              `json:"password"`
+}
+
+// MessageResponse defines model for MessageResponse.
+type MessageResponse struct {
+	Content      string    `json:"content"`
+	CreatedAt    time.Time `json:"createdAt"`
+	Id           int       `json:"id"`
+	IsMine       bool      `json:"isMine"`
+	RoomId       int       `json:"roomId"`
+	SenderUserId int       `json:"senderUserId"`
 }
 
 // NewUserResponse defines model for NewUserResponse.
@@ -248,6 +261,12 @@ type RefreshTokenRequest struct {
 type RegisterRequest struct {
 	Email    openapi_types.Email `json:"email"`
 	Password string              `json:"password"`
+}
+
+// SendMessageRequest defines model for SendMessageRequest.
+type SendMessageRequest struct {
+	Content string `json:"content"`
+	RoomId  int    `json:"roomId"`
 }
 
 // TagResponse defines model for TagResponse.
@@ -382,6 +401,9 @@ type RegisterWithEmailJSONRequestBody = RegisterRequest
 // UploadImageMultipartRequestBody defines body for UploadImage for multipart/form-data ContentType.
 type UploadImageMultipartRequestBody UploadImageMultipartBody
 
+// SendMessageJSONRequestBody defines body for SendMessage for application/json ContentType.
+type SendMessageJSONRequestBody = SendMessageRequest
+
 // UpdateMyProfileJSONRequestBody defines body for UpdateMyProfile for application/json ContentType.
 type UpdateMyProfileJSONRequestBody = ProfileUpdateRequest
 
@@ -420,6 +442,9 @@ type ServerInterface interface {
 	// 気になる一覧を取得する
 	// (GET /interests)
 	ListInterests(ctx echo.Context, params ListInterestsParams) error
+	// メッセージを送信する
+	// (POST /messages)
+	SendMessage(ctx echo.Context) error
 	// 自分のプロフィールを取得する
 	// (GET /profiles/me)
 	GetMyProfile(ctx echo.Context) error
@@ -567,6 +592,17 @@ func (w *ServerInterfaceWrapper) ListInterests(ctx echo.Context) error {
 
 	// Invoke the callback with all the unmarshaled arguments
 	err = w.Handler.ListInterests(ctx, params)
+	return err
+}
+
+// SendMessage converts echo context to params.
+func (w *ServerInterfaceWrapper) SendMessage(ctx echo.Context) error {
+	var err error
+
+	ctx.Set(string(BearerAuthScopes), []string{})
+
+	// Invoke the callback with all the unmarshaled arguments
+	err = w.Handler.SendMessage(ctx)
 	return err
 }
 
@@ -798,6 +834,7 @@ func RegisterHandlersWithOptions(router EchoRouter, si ServerInterface, options 
 	router.GET(options.BaseURL+"/health", wrapper.HealthCheck, options.OperationMiddlewares["healthCheck"]...)
 	router.POST(options.BaseURL+"/images", wrapper.UploadImage, options.OperationMiddlewares["uploadImage"]...)
 	router.GET(options.BaseURL+"/interests", wrapper.ListInterests, options.OperationMiddlewares["listInterests"]...)
+	router.POST(options.BaseURL+"/messages", wrapper.SendMessage, options.OperationMiddlewares["sendMessage"]...)
 	router.GET(options.BaseURL+"/profiles/me", wrapper.GetMyProfile, options.OperationMiddlewares["getMyProfile"]...)
 	router.PATCH(options.BaseURL+"/profiles/me", wrapper.UpdateMyProfile, options.OperationMiddlewares["updateMyProfile"]...)
 	router.POST(options.BaseURL+"/profiles/me", wrapper.CreateMyProfile, options.OperationMiddlewares["createMyProfile"]...)
@@ -1199,6 +1236,84 @@ func (response ListInterests401JSONResponse) VisitListInterestsResponse(w http.R
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SendMessageRequestObject struct {
+	Body *SendMessageJSONRequestBody
+}
+
+type SendMessageResponseObject interface {
+	VisitSendMessageResponse(w http.ResponseWriter) error
+}
+
+type SendMessage201JSONResponse MessageResponse
+
+func (response SendMessage201JSONResponse) VisitSendMessageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SendMessage401JSONResponse struct{ UnauthorizedJSONResponse }
+
+func (response SendMessage401JSONResponse) VisitSendMessageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SendMessage403JSONResponse ErrorResponse
+
+func (response SendMessage403JSONResponse) VisitSendMessageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(403)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SendMessage404JSONResponse ErrorResponse
+
+func (response SendMessage404JSONResponse) VisitSendMessageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type SendMessage422JSONResponse struct{ ValidationErrorJSONResponse }
+
+func (response SendMessage422JSONResponse) VisitSendMessageResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(422)
 	_, err := buf.WriteTo(w)
 	return err
 }
@@ -1764,6 +1879,9 @@ type StrictServerInterface interface {
 	// 気になる一覧を取得する
 	// (GET /interests)
 	ListInterests(ctx context.Context, request ListInterestsRequestObject) (ListInterestsResponseObject, error)
+	// メッセージを送信する
+	// (POST /messages)
+	SendMessage(ctx context.Context, request SendMessageRequestObject) (SendMessageResponseObject, error)
 	// 自分のプロフィールを取得する
 	// (GET /profiles/me)
 	GetMyProfile(ctx context.Context, request GetMyProfileRequestObject) (GetMyProfileResponseObject, error)
@@ -2056,6 +2174,35 @@ func (sh *strictHandler) ListInterests(ctx echo.Context, params ListInterestsPar
 		return err
 	} else if validResponse, ok := response.(ListInterestsResponseObject); ok {
 		return validResponse.VisitListInterestsResponse(ctx.Response())
+	} else if response != nil {
+		return fmt.Errorf("unexpected response type: %T", response)
+	}
+	return nil
+}
+
+// SendMessage operation middleware
+func (sh *strictHandler) SendMessage(ctx echo.Context) error {
+	var request SendMessageRequestObject
+
+	var body SendMessageJSONRequestBody
+	if err := ctx.Bind(&body); err != nil {
+		return err
+	}
+	request.Body = &body
+
+	handler := func(ctx echo.Context, request interface{}) (interface{}, error) {
+		return sh.ssi.SendMessage(ctx.Request().Context(), request.(SendMessageRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "SendMessage")
+	}
+
+	response, err := handler(ctx, request)
+
+	if err != nil {
+		return err
+	} else if validResponse, ok := response.(SendMessageResponseObject); ok {
+		return validResponse.VisitSendMessageResponse(ctx.Response())
 	} else if response != nil {
 		return fmt.Errorf("unexpected response type: %T", response)
 	}

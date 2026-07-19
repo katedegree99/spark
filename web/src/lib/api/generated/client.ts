@@ -28,6 +28,7 @@ import type {
   ListThingsParams,
   ListUsersParams,
   LoginRequest,
+  MessageResponse,
   NewUsersResponse,
   OtpSentResponse,
   OtpVerifyRequest,
@@ -38,6 +39,7 @@ import type {
   RecommendUsersResponse,
   RefreshTokenRequest,
   RegisterRequest,
+  SendMessageRequest,
   ThingCreateRequest,
   ThingResponse,
   ThingsResponse,
@@ -1738,6 +1740,101 @@ export const useUpdateMyProfile = <TError = Promise<UnauthorizedResponse | Error
 
   const swrKey = swrOptions?.swrKey ?? getUpdateMyProfileMutationKey();
   const swrFn = getUpdateMyProfileMutationFetcher(fetchOptions);
+
+  const query = useSWRMutation(swrKey, swrFn, swrOptions)
+
+  return {
+    swrKey,
+    ...query
+  }
+}
+
+export type sendMessageResponse201 = {
+  data: MessageResponse
+  status: 201
+}
+
+export type sendMessageResponse401 = {
+  data: UnauthorizedResponse
+  status: 401
+}
+
+export type sendMessageResponse403 = {
+  data: ErrorResponse
+  status: 403
+}
+
+export type sendMessageResponse404 = {
+  data: ErrorResponse
+  status: 404
+}
+
+export type sendMessageResponse422 = {
+  data: ValidationErrorResponse
+  status: 422
+}
+
+export type sendMessageResponseSuccess = (sendMessageResponse201) & {
+  headers: Headers;
+};
+export type sendMessageResponseError = (sendMessageResponse401 | sendMessageResponse403 | sendMessageResponse404 | sendMessageResponse422) & {
+  headers: Headers;
+};
+
+export type sendMessageResponse = (sendMessageResponseSuccess | sendMessageResponseError)
+
+export const getSendMessageUrl = () => {
+
+
+
+
+  return `/messages`
+}
+
+/**
+ * @summary メッセージを送信する
+ */
+export const sendMessage = async (sendMessageRequest: SendMessageRequest, options?: RequestInit): Promise<sendMessageResponse> => {
+
+  const res = await fetch(getSendMessageUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(sendMessageRequest)
+  }
+)
+
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: sendMessageResponse['data'] = body ? JSON.parse(body) : {}
+  return { data, status: res.status, headers: res.headers } as sendMessageResponse
+}
+
+
+
+
+export const getSendMessageMutationFetcher = ( options?: RequestInit) => {
+  return (_: Key, { arg }: { arg: SendMessageRequest }) => {
+    return sendMessage(arg, options);
+  }
+}
+export const getSendMessageMutationKey = () => [`/messages`] as const;
+
+export type SendMessageMutationResult = NonNullable<Awaited<ReturnType<typeof sendMessage>>>
+
+/**
+ * @summary メッセージを送信する
+ */
+export const useSendMessage = <TError = Promise<UnauthorizedResponse | ErrorResponse | ValidationErrorResponse>>(
+   options?: { swr?:SWRMutationConfiguration<Awaited<ReturnType<typeof sendMessage>>, TError, Key, SendMessageRequest, Awaited<ReturnType<typeof sendMessage>>> & { swrKey?: string }, fetch?: RequestInit}
+) => {
+
+  const {swr: swrOptions, fetch: fetchOptions} = options ?? {}
+
+  const swrKey = swrOptions?.swrKey ?? getSendMessageMutationKey();
+  const swrFn = getSendMessageMutationFetcher(fetchOptions);
 
   const query = useSWRMutation(swrKey, swrFn, swrOptions)
 
