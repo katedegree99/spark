@@ -10,8 +10,6 @@ make down     # next dev / redocly preview-docs / prism mock を停止
 make restart  # down → up
 ```
 
-> `make` の schema/mock ターゲットは nvm の Node (`v24.16.0`) を PATH に通して実行する(`Makefile` の `NVM_NODE`)。
-
 ### web/ (Next.js)
 
 ```bash
