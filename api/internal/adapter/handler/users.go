@@ -18,6 +18,7 @@ type UsersHandler struct {
 	getUserUsecase       usecase.GetUserUsecase
 	interestUsecase      usecase.InterestUsecase
 	listInterestsUsecase usecase.ListInterestsUsecase
+	hub                  *WsHub
 }
 
 func NewUsersHandler(
@@ -28,6 +29,7 @@ func NewUsersHandler(
 	getUserUsecase usecase.GetUserUsecase,
 	interestUsecase usecase.InterestUsecase,
 	listInterestsUsecase usecase.ListInterestsUsecase,
+	hub *WsHub,
 ) *UsersHandler {
 	return &UsersHandler{
 		pickupUsecase:        pickupUsecase,
@@ -37,6 +39,7 @@ func NewUsersHandler(
 		getUserUsecase:       getUserUsecase,
 		interestUsecase:      interestUsecase,
 		listInterestsUsecase: listInterestsUsecase,
+		hub:                  hub,
 	}
 }
 
@@ -301,6 +304,10 @@ func (h *UsersHandler) SendInterest(ctx context.Context, request generated.SendI
 			}, nil
 		}
 		return nil, err
+	}
+
+	if result.Matched {
+		h.hub.NotifyRoomsUpdated()
 	}
 
 	resp := generated.SendInterest200JSONResponse{Matched: &result.Matched}

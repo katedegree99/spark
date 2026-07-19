@@ -11,10 +11,11 @@ import (
 
 type MessageHandler struct {
 	sendMessageUsecase usecase.SendMessageUsecase
+	hub                *WsHub
 }
 
-func NewMessageHandler(sendMessageUsecase usecase.SendMessageUsecase) *MessageHandler {
-	return &MessageHandler{sendMessageUsecase: sendMessageUsecase}
+func NewMessageHandler(sendMessageUsecase usecase.SendMessageUsecase, hub *WsHub) *MessageHandler {
+	return &MessageHandler{sendMessageUsecase: sendMessageUsecase, hub: hub}
 }
 
 func (h *MessageHandler) SendMessage(ctx context.Context, req generated.SendMessageRequestObject) (generated.SendMessageResponseObject, error) {
@@ -33,6 +34,13 @@ func (h *MessageHandler) SendMessage(ctx context.Context, req generated.SendMess
 		}
 		return nil, err
 	}
+
+	h.hub.BroadcastMessage(msg.RoomID, WsMessagePayload{
+		ID:           msg.ID,
+		SenderUserID: msg.SenderUserID,
+		Content:      msg.Content,
+		CreatedAt:    msg.CreatedAt.Format("2006-01-02T15:04:05Z"),
+	})
 
 	isMine := true
 	return generated.SendMessage201JSONResponse{

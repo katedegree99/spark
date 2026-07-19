@@ -18,12 +18,12 @@ type wsRoomsEvent struct {
 }
 
 type wsMessageEvent struct {
-	Type    string         `json:"type"`
-	RoomID  uint           `json:"roomId"`
-	Message wsMessagePayload `json:"message"`
+	Type    string           `json:"type"`
+	RoomID  uint             `json:"roomId"`
+	Message WsMessagePayload `json:"message"`
 }
 
-type wsMessagePayload struct {
+type WsMessagePayload struct {
 	ID           uint   `json:"id"`
 	SenderUserID uint   `json:"senderUserId"`
 	Content      string `json:"content"`
@@ -54,7 +54,7 @@ func (h *WsHub) NotifyRoomsUpdated() {
 }
 
 // BroadcastMessage は指定ルームの接続にメッセージを push する
-func (h *WsHub) BroadcastMessage(roomID uint, payload wsMessagePayload) {
+func (h *WsHub) BroadcastMessage(roomID uint, payload WsMessagePayload) {
 	event, _ := json.Marshal(wsMessageEvent{
 		Type:    "new_message",
 		RoomID:  roomID,
@@ -63,6 +63,16 @@ func (h *WsHub) BroadcastMessage(roomID uint, payload wsMessagePayload) {
 	for conn := range h.rooms[roomID] {
 		conn.WriteMessage(websocket.TextMessage, event)
 	}
+}
+
+// RoomListConnCount はテスト用にルーム一覧接続数を返す
+func (h *WsHub) RoomListConnCount() int {
+	return len(h.roomListConns)
+}
+
+// RoomConnCount はテスト用に指定ルームの接続数を返す
+func (h *WsHub) RoomConnCount(roomID uint) int {
+	return len(h.rooms[roomID])
 }
 
 // HandleRoomsWS は WS /ws/rooms を処理する
